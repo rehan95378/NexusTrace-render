@@ -1,0 +1,16 @@
+{
+  "FINANCIAL": [
+    "transferred funds to", "transferred money to", "transferred rs", "transferred to",
+    "paid money to", "paid to", "sent money to", "sent to",
+    "received money from", "received from", "received funds from",
+    "account held by", "transferred an account"
+  ],
+  "COMMUNICATION": [
+    "called", "phoned", "contacted", "messaged", "texted", "spoke with",
+    "spoke to", "was called by", "contacted a number", "called the victim"
+  ],
+  "FAMILY": [
+    "is the brother of", "is the sister of", "is the son of", "is the father of",
+    "is the cousin of", "is married to", "is the uncle of", "husband", "wife", "spouse"
+  ]
+}

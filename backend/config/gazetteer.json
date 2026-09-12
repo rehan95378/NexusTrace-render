@@ -1,0 +1,14 @@
+{
+  "Person": [
+    "Ramesh Kumar", "Suresh Kumar", "Anil Verma", "Priya Sharma",
+    "Vikram Singh", "Rajesh Gupta", "Meena Patel", "Sanjay Rao",
+    "Kavita Sharma", "Deepak Sharma", "Rajesh Pillai", "Farhan Sheikh", "Sunita Rane"
+  ],
+  "Location": [
+    "Nashik", "Mumbai", "Pune", "Delhi", "Nagpur", "Aurangabad", "Thane"
+  ],
+  "Organization": [
+    "NCRB", "State CID", "Nashik Police", "Central Bureau of Investigation",
+    "Real Estate Group"
+  ]
+}
