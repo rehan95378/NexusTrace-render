@@ -10,11 +10,20 @@ request instead of from in-memory session state. Because entities are always
 persisted via MERGE, the graph is the single source of truth in both modes.
 """
 import re
+from itertools import combinations
 
 from utils import neo4j_driver as db
 from services import extraction as ext
 from services import resolution as res
 from services import audit
+
+
+def _clean_person_name(text):
+    """Strip honorifics and a trailing possessive 's/'s that spaCy's NER
+    sometimes folds into the PERSON span (e.g. "Vijay Singh's" -> "Vijay Singh")."""
+    name = re.sub(r'^(Smt\.|Shri\.|Mr\.|Mrs\.)\s*', '', text).strip()
+    name = re.sub(r"[’\']s$", '', name).strip()
+    return name
 
 
 def _known(label, prop="name"):
@@ -84,7 +93,7 @@ def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
     raw_people = []
     for ent in doc.ents:
         if ent.label_ == "PERSON":
-            clean_name = re.sub(r'^(Smt\.|Shri\.|Mr\.|Mrs\.)\s*', '', ent.text).strip()
+            clean_name = _clean_person_name(ent.text)
             if (len(clean_name.split()) >= 1 and clean_name not in ext.STOP_WORDS
                     and not ext.is_probable_date(clean_name)):
                 raw_people.append(clean_name)
@@ -154,7 +163,7 @@ def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
         present_people_set = set()
         for ent in sent.ents:
             if ent.label_ == "PERSON":
-                clean_name = re.sub(r'^(Smt\.|Shri\.|Mr\.|Mrs\.)\s*', '', ent.text).strip()
+                clean_name = _clean_person_name(ent.text)
                 if clean_name in ext.STOP_WORDS or ext.is_probable_date(clean_name):
                     continue
                 canonical = res.resolve_person(clean_name, people)
@@ -170,18 +179,20 @@ def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
         present_phs = [ph for ph in phones if ph in sent.text]
 
         if len(present_people) >= 2:
-            for p1 in present_people:
-                for p2 in present_people:
-                    if p1 != p2:
-                        for rel_type in ["ASSOCIATE_OF", "FINANCIAL_TRAIL", "CDR_LINK"]:
-                            if any(k in s_low for k in ext.TRIGGERS[rel_type]):
-                                db.query(
-                                    f"MATCH (a:Person {{id: $p1}}), (b:Person {{id: $p2}}) "
-                                    f"MERGE (a)-[r:{rel_type}]->(b) SET r.confidence = coalesce(r.confidence, 0) + 1, "
-                                    f"r.source_sentence = $sent",
-                                    {"p1": p1, "p2": p2, "sent": sent.text.strip()},
-                                )
-                                audit.log("ADD_RELATIONSHIP", {"type": rel_type, "from": p1, "to": p2})
+            # Unordered pairs only: combinations() yields each pair once, so a
+            # sentence mentioning A and B creates a single directed edge
+            # instead of both A->B and B->A (which Neo4j stores as two
+            # distinct relationships since they point in opposite directions).
+            for p1, p2 in combinations(present_people, 2):
+                for rel_type in ["ASSOCIATE_OF", "FINANCIAL_TRAIL", "CDR_LINK"]:
+                    if any(k in s_low for k in ext.TRIGGERS[rel_type]):
+                        db.query(
+                            f"MATCH (a:Person {{id: $p1}}), (b:Person {{id: $p2}}) "
+                            f"MERGE (a)-[r:{rel_type}]->(b) SET r.confidence = coalesce(r.confidence, 0) + 1, "
+                            f"r.source_sentence = $sent",
+                            {"p1": p1, "p2": p2, "sent": sent.text.strip()},
+                        )
+                        audit.log("ADD_RELATIONSHIP", {"type": rel_type, "from": p1, "to": p2})
 
         for l in present_locs:
             for p in present_people:
@@ -217,15 +228,15 @@ def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
                     audit.log("ADD_RELATIONSHIP", {"type": "USES_DEVICE", "from": p, "to": ph})
 
         if len(present_phs) >= 2:
-            for ph1 in present_phs:
-                for ph2 in present_phs:
-                    if ph1 != ph2 and any(k in s_low for k in ext.TRIGGERS["INTERCEPTED_CALL"]):
-                        db.query(
-                            "MATCH (a:Phone {id: $ph1}), (b:Phone {id: $ph2}) "
-                            "MERGE (a)-[r:INTERCEPTED_CALL]->(b) SET r.confidence = coalesce(r.confidence, 0) + 1",
-                            {"ph1": ph1, "ph2": ph2},
-                        )
-                        audit.log("ADD_RELATIONSHIP", {"type": "INTERCEPTED_CALL", "from": ph1, "to": ph2})
+            # Same unordered-pair fix as above, for phone-to-phone call links.
+            for ph1, ph2 in combinations(present_phs, 2):
+                if any(k in s_low for k in ext.TRIGGERS["INTERCEPTED_CALL"]):
+                    db.query(
+                        "MATCH (a:Phone {id: $ph1}), (b:Phone {id: $ph2}) "
+                        "MERGE (a)-[r:INTERCEPTED_CALL]->(b) SET r.confidence = coalesce(r.confidence, 0) + 1",
+                        {"ph1": ph1, "ph2": ph2},
+                    )
+                    audit.log("ADD_RELATIONSHIP", {"type": "INTERCEPTED_CALL", "from": ph1, "to": ph2})
 
         if present_people and present_vhs and any(k in s_low for k in ext.TRIGGERS["OWNS_VEHICLE"]):
             for p in present_people:
