@@ -19,7 +19,9 @@ const TABS = [
 export default function App() {
   const [tab, setTab] = useState('ingestion')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [resetKey, setResetKey] = useState(0)
   const [health, setHealth] = useState(null)
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'unreachable' }))
@@ -27,6 +29,23 @@ export default function App() {
 
   const bumpRefresh = () => setRefreshKey((k) => k + 1)
   const activeTab = TABS.find((t) => t.key === tab)
+
+  async function handleReset() {
+    if (!window.confirm('This will permanently wipe the graph and audit log. Continue?')) {
+      return
+    }
+    setResetting(true)
+    try {
+      await api.clear()
+      bumpRefresh()
+      setResetKey((k) => k + 1) // remounts Ingestion, clearing its pasted text
+      setTab('ingestion')
+    } catch (err) {
+      window.alert(`Reset failed: ${err.message}`)
+    } finally {
+      setResetting(false)
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -46,6 +65,14 @@ export default function App() {
         ))}
         <div className="case-nav__footer">
           <StatusPill health={health} />
+          <button
+            className="danger"
+            style={{ width: '100%', marginTop: 12 }}
+            onClick={handleReset}
+            disabled={resetting}
+          >
+            {resetting ? 'Resetting…' : 'Reset case (wipe all)'}
+          </button>
         </div>
       </nav>
 
@@ -54,7 +81,7 @@ export default function App() {
           <h1>{activeTab.title}</h1>
         </div>
 
-        {tab === 'ingestion' && <Ingestion onIngested={bumpRefresh} />}
+        {tab === 'ingestion' && <Ingestion key={resetKey} onIngested={bumpRefresh} />}
         {tab === 'entities' && <Entities refreshKey={refreshKey} />}
         {tab === 'graph' && <GraphView refreshKey={refreshKey} />}
         {tab === 'key-players' && <KeyPlayers refreshKey={refreshKey} />}
