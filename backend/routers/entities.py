@@ -5,13 +5,18 @@ from utils import neo4j_driver as db
 router = APIRouter()
 
 
-@router.get("/entities")
-def get_entities():
-    people = [r["v"] for r in db.query("MATCH (n:Person) RETURN n.name AS v ORDER BY v")]
-    locations = [r["v"] for r in db.query("MATCH (n:Location) RETURN n.name AS v ORDER BY v")]
-    vehicles = [r["v"] for r in db.query("MATCH (n:Vehicle) RETURN n.plate AS v ORDER BY v")]
-    phones = [r["v"] for r in db.query("MATCH (n:Phone) RETURN n.number AS v ORDER BY v")]
-    orgs = [r["v"] for r in db.query("MATCH (n:Organization) RETURN n.name AS v ORDER BY v")]
+@router.get("/cases/{case_id}/entities")
+def get_entities(case_id: str):
+    people = [r["v"] for r in db.query(
+        "MATCH (n:Person {case_id: $case_id}) RETURN n.name AS v ORDER BY v", {"case_id": case_id})]
+    locations = [r["v"] for r in db.query(
+        "MATCH (n:Location {case_id: $case_id}) RETURN n.name AS v ORDER BY v", {"case_id": case_id})]
+    vehicles = [r["v"] for r in db.query(
+        "MATCH (n:Vehicle {case_id: $case_id}) RETURN n.plate AS v ORDER BY v", {"case_id": case_id})]
+    phones = [r["v"] for r in db.query(
+        "MATCH (n:Phone {case_id: $case_id}) RETURN n.number AS v ORDER BY v", {"case_id": case_id})]
+    orgs = [r["v"] for r in db.query(
+        "MATCH (n:Organization {case_id: $case_id}) RETURN n.name AS v ORDER BY v", {"case_id": case_id})]
     return {
         "people": people,
         "locations": locations,

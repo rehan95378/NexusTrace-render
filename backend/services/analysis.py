@@ -13,13 +13,14 @@ def _build_graph(edge_records):
     return G, financial_G
 
 
-def key_players(top_n=10):
-    edge_records = db.fetch_graph_edges()
+def key_players(case_id, top_n=10):
+    edge_records = db.fetch_graph_edges(case_id)
     if not edge_records:
         return {"ranked": [], "message": "No graph data yet. Run ingestion first."}
 
     G, _ = _build_graph(edge_records)
-    person_ids = {r["v"] for r in db.query("MATCH (p:Person) RETURN p.id AS v")}
+    person_ids = {r["v"] for r in db.query(
+        "MATCH (p:Person {case_id: $case_id}) RETURN p.id AS v", {"case_id": case_id})}
 
     pagerank_scores = nx.pagerank(G) if G.number_of_nodes() > 0 else {}
     try:
@@ -39,13 +40,14 @@ def key_players(top_n=10):
     return {"ranked": ranked[:top_n], "message": None}
 
 
-def anomalies():
-    edge_records = db.fetch_graph_edges()
+def anomalies(case_id):
+    edge_records = db.fetch_graph_edges(case_id)
     if not edge_records:
-        return {"message": "No graph data yet. Run ingestion first.", "cycles": [], "high_connectivity": [], "clusters": None, "bridges": []}
+        return {"message": "No graph data yet. Run ingestion first.", "cycles": [], "high_connectivity": [], "cluster_count": None, "bridges": []}
 
     G, financial_G = _build_graph(edge_records)
-    person_ids = {r["v"] for r in db.query("MATCH (p:Person) RETURN p.id AS v")}
+    person_ids = {r["v"] for r in db.query(
+        "MATCH (p:Person {case_id: $case_id}) RETURN p.id AS v", {"case_id": case_id})}
 
     try:
         cycles = [cycle + [cycle[0]] for cycle in nx.simple_cycles(financial_G)]

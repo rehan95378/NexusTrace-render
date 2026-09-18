@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
-export default function Anomalies({ refreshKey }) {
+export default function Anomalies({ caseId, refreshKey }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.anomalies().then(setData).catch((e) => setError(e.message))
-  }, [refreshKey])
+    api.anomalies(caseId).then(setData).catch((e) => setError(e.message))
+  }, [caseId, refreshKey])
 
   if (error) return <Panel title="Suspicious Pattern Detection"><div className="alert-row">{error}</div></Panel>
   if (!data) return <Panel title="Suspicious Pattern Detection"><p className="empty-state">Loading…</p></Panel>

@@ -20,12 +20,24 @@ async function request(path, options = {}) {
 
 export const api = {
   health: () => request('/health'),
-  ingest: (fir_text, cdr_text, append_mode) =>
-    request('/ingest', { method: 'POST', body: JSON.stringify({ fir_text, cdr_text, append_mode }) }),
-  clear: () => request('/clear', { method: 'POST' }),
-  entities: () => request('/entities'),
-  graph: () => request('/graph'),
-  keyPlayers: () => request('/analysis/key-players'),
-  anomalies: () => request('/analysis/anomalies'),
-  audit: () => request('/audit'),
+
+  // Cases
+  listCases: () => request('/cases'),
+  createCase: (name) => request('/cases', { method: 'POST', body: JSON.stringify({ name }) }),
+  renameCase: (caseId, name) =>
+    request(`/cases/${caseId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  deleteCase: (caseId) => request(`/cases/${caseId}`, { method: 'DELETE' }),
+
+  // Everything below is scoped to one case
+  ingest: (caseId, fir_text, cdr_text, append_mode) =>
+    request(`/cases/${caseId}/ingest`, {
+      method: 'POST',
+      body: JSON.stringify({ fir_text, cdr_text, append_mode }),
+    }),
+  clearCase: (caseId) => request(`/cases/${caseId}/clear`, { method: 'POST' }),
+  entities: (caseId) => request(`/cases/${caseId}/entities`),
+  graph: (caseId) => request(`/cases/${caseId}/graph`),
+  keyPlayers: (caseId) => request(`/cases/${caseId}/analysis/key-players`),
+  anomalies: (caseId) => request(`/cases/${caseId}/analysis/anomalies`),
+  audit: (caseId) => request(`/cases/${caseId}/audit`),
 }

@@ -2,18 +2,18 @@ import { useEffect, useState } from 'react'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
-export default function KeyPlayers({ refreshKey }) {
+export default function KeyPlayers({ caseId, refreshKey }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.keyPlayers().then(setData).catch((e) => setError(e.message))
-  }, [refreshKey])
+    api.keyPlayers(caseId).then(setData).catch((e) => setError(e.message))
+  }, [caseId, refreshKey])
 
   return (
     <Panel
       title="Key Player Identification"
-      hint="Computed via PageRank and betweenness centrality on the current evidence graph."
+      hint="Computed via PageRank and betweenness centrality on this case's evidence graph."
     >
       {error && <div className="alert-row">{error}</div>}
       {!error && !data && <p className="empty-state">Loading…</p>}

@@ -4,7 +4,7 @@ import { Network } from 'vis-network'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
-export default function GraphView({ refreshKey }) {
+export default function GraphView({ caseId, refreshKey }) {
   const containerRef = useRef(null)
   const networkRef = useRef(null)
   const [empty, setEmpty] = useState(false)
@@ -13,7 +13,7 @@ export default function GraphView({ refreshKey }) {
   useEffect(() => {
     let cancelled = false
 
-    api.graph().then(({ nodes, edges }) => {
+    api.graph(caseId).then(({ nodes, edges }) => {
       if (cancelled) return
       if (nodes.length === 0) {
         setEmpty(true)
@@ -57,16 +57,17 @@ export default function GraphView({ refreshKey }) {
       if (networkRef.current) {
         networkRef.current.destroy()
       }
-      networkRef.current = new Network(containerRef.current, { nodes: visNodes, edges: visEdges }, options)
+      const network = new Network(containerRef.current, { nodes: visNodes, edges: visEdges }, options)
+      networkRef.current = network
     }).catch((e) => setError(e.message))
 
     return () => {
       cancelled = true
     }
-  }, [refreshKey])
+  }, [caseId, refreshKey])
 
   return (
-    <Panel title="Evidence Graph Map" hint="Force-directed map of every entity and relationship currently in the graph.">
+    <Panel title="Evidence Graph Map" hint="Force-directed map of every entity and relationship currently in this case's graph.">
       {error && <div className="alert-row">{error}</div>}
       {empty && !error && <p className="empty-state">Canvas empty. Run ingestion in the Ingestion tab first.</p>}
       <div id="graph-canvas" ref={containerRef} style={{ display: empty || error ? 'none' : 'block' }} />

@@ -35,7 +35,7 @@ cd backend
 python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt --break-system-packages
 cp .env.example .env   # fill in your real Neo4j credentials
-uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8000
 ```
 Visit http://localhost:8000/health — should return `{"status":"ok", "neo4j_connected": true}`.
 The spaCy model (`en_core_web_sm`) is installed straight from

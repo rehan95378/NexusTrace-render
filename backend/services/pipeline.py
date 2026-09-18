@@ -1,13 +1,13 @@
 """
 The core ingestion pipeline: takes raw FIR text and/or CDR/ledger text,
 extracts entities, resolves aliases, writes them (and the relationships
-between them) to Neo4j, and logs every write to the audit trail.
+between them) to Neo4j — scoped to one case — and logs every write to that
+case's audit trail.
 
-This mirrors the Streamlit prototype's "Panel 1" logic exactly, with one
-structural change: since a FastAPI request is stateless (no st.session_state),
-"already known" entities are read from Neo4j itself at the start of each
-request instead of from in-memory session state. Because entities are always
-persisted via MERGE, the graph is the single source of truth in both modes.
+Node identity is now (case_id, id) rather than a globally unique id, so the
+same name/plate/number can exist as separate real-world entities in
+separate cases. "Already known" entities are read from Neo4j at the start
+of each request, filtered to the current case.
 """
 import re
 from itertools import combinations
@@ -26,12 +26,15 @@ def _clean_person_name(text):
     return name
 
 
-def _known(label, prop="name"):
-    rows = db.query(f"MATCH (n:{label}) RETURN n.{prop} AS v")
+def _known(case_id, label, prop="name"):
+    rows = db.query(
+        f"MATCH (n:{label} {{case_id: $case_id}}) RETURN n.{prop} AS v",
+        {"case_id": case_id},
+    )
     return [r["v"] for r in rows if r["v"] is not None]
 
 
-def ingest_tabular_cdr(text):
+def ingest_tabular_cdr(text, case_id):
     """Detects caller/called CDR tables and bypasses the NLP + keyword pipeline entirely."""
     is_tabular, delim = ext.looks_tabular(text)
     if not is_tabular:
@@ -45,11 +48,14 @@ def ingest_tabular_cdr(text):
 
         for num in (caller, called):
             if num not in seen_numbers:
-                db.query("MERGE (n:Phone {id: $num}) SET n.number = $num", {"num": num})
-                audit.log("ADD_ENTITY", {"type": "Phone", "id": num, "source": "tabular_cdr"})
+                db.query(
+                    "MERGE (n:Phone {id: $num, case_id: $case_id}) SET n.number = $num",
+                    {"num": num, "case_id": case_id},
+                )
+                audit.log(case_id, "ADD_ENTITY", {"type": "Phone", "id": num, "source": "tabular_cdr"})
                 seen_numbers.add(num)
 
-        params = {"caller": caller, "called": called}
+        params = {"caller": caller, "called": called, "case_id": case_id}
         details = {"type": "INTERCEPTED_CALL", "from": caller, "to": called, "source": "tabular_cdr"}
         if row["timestamp"]:
             params["timestamp"] = row["timestamp"]
@@ -65,24 +71,24 @@ def ingest_tabular_cdr(text):
             set_clauses.append("r.last_duration = $duration")
 
         cypher = (
-            "MATCH (a:Phone {id: $caller}), (b:Phone {id: $called}) "
+            "MATCH (a:Phone {id: $caller, case_id: $case_id}), (b:Phone {id: $called, case_id: $case_id}) "
             f"MERGE (a)-[r:INTERCEPTED_CALL]->(b) SET {', '.join(set_clauses)}"
         )
         db.query(cypher, params)
-        audit.log("ADD_RELATIONSHIP", details)
+        audit.log(case_id, "ADD_RELATIONSHIP", details)
 
     return list(seen_numbers)
 
 
-def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
+def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool, case_id: str):
     fir_text = fir_text or ""
     cdr_text = cdr_text or ""
 
     if not append_mode:
-        db.clear_database()
-        audit.clear()
+        db.clear_case(case_id)
+        audit.clear(case_id)
 
-    tabular_numbers = ingest_tabular_cdr(cdr_text)
+    tabular_numbers = ingest_tabular_cdr(cdr_text, case_id)
     cdr_text_for_nlp = "" if tabular_numbers is not None else cdr_text
 
     combined_text = f"{fir_text} \n {cdr_text_for_nlp}"
@@ -98,7 +104,7 @@ def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
                     and not ext.is_probable_date(clean_name)):
                 raw_people.append(clean_name)
 
-    known_people = _known("Person")
+    known_people = _known(case_id, "Person")
     resolved_people = []
     # Process longer (fuller) names first so the canonical form that survives
     # is the full name rather than an initials variant encountered first.
@@ -107,13 +113,16 @@ def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
         resolved_people.append(canonical)
         if canonical not in known_people:
             known_people.append(canonical)
-            db.query("MERGE (n:Person {id: $name}) SET n.name = $name", {"name": canonical})
-            audit.log("ADD_ENTITY", {"type": "Person", "id": canonical})
+            db.query(
+                "MERGE (n:Person {id: $name, case_id: $case_id}) SET n.name = $name",
+                {"name": canonical, "case_id": case_id},
+            )
+            audit.log(case_id, "ADD_ENTITY", {"type": "Person", "id": canonical})
 
     people = known_people
 
     # --- LOCATIONS ---
-    known_locations = _known("Location")
+    known_locations = _known(case_id, "Location")
     raw_locations = []
     for ent in doc.ents:
         if ent.label_ in ["GPE", "LOC", "FAC"]:
@@ -125,35 +134,47 @@ def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
     new_locations = [l for l in set(raw_locations) if l not in known_locations]
     locations = list(set(known_locations + raw_locations))
     for l in new_locations:
-        db.query("MERGE (n:Location {id: $loc}) SET n.name = $loc", {"loc": l})
-        audit.log("ADD_ENTITY", {"type": "Location", "id": l})
+        db.query(
+            "MERGE (n:Location {id: $loc, case_id: $case_id}) SET n.name = $loc",
+            {"loc": l, "case_id": case_id},
+        )
+        audit.log(case_id, "ADD_ENTITY", {"type": "Location", "id": l})
 
     # --- ORGANIZATIONS (known watchlist substring match) ---
-    known_orgs = _known("Organization")
+    known_orgs = _known(case_id, "Organization")
     raw_orgs = ext.extract_orgs(combined_text)
     new_orgs = [o for o in raw_orgs if o not in known_orgs]
     orgs = list(set(known_orgs + raw_orgs))
     for o in new_orgs:
-        db.query("MERGE (n:Organization {id: $o}) SET n.name = $o", {"o": o})
-        audit.log("ADD_ENTITY", {"type": "Organization", "id": o})
+        db.query(
+            "MERGE (n:Organization {id: $o, case_id: $case_id}) SET n.name = $o",
+            {"o": o, "case_id": case_id},
+        )
+        audit.log(case_id, "ADD_ENTITY", {"type": "Organization", "id": o})
 
     # --- VEHICLES ---
-    known_vehicles = _known("Vehicle", prop="plate")
+    known_vehicles = _known(case_id, "Vehicle", prop="plate")
     raw_vehicles = ext.extract_vehicles(combined_text)
     new_vehicles = [v for v in raw_vehicles if v not in known_vehicles]
     vehicles = list(set(known_vehicles + raw_vehicles))
     for v in new_vehicles:
-        db.query("MERGE (n:Vehicle {id: $v}) SET n.plate = $v", {"v": v})
-        audit.log("ADD_ENTITY", {"type": "Vehicle", "id": v})
+        db.query(
+            "MERGE (n:Vehicle {id: $v, case_id: $case_id}) SET n.plate = $v",
+            {"v": v, "case_id": case_id},
+        )
+        audit.log(case_id, "ADD_ENTITY", {"type": "Vehicle", "id": v})
 
     # --- PHONES (narrative text only — tabular numbers already merged) ---
-    known_phones = _known("Phone", prop="number")
+    known_phones = _known(case_id, "Phone", prop="number")
     raw_phones = ext.extract_phones(combined_text)
     new_phones = [p for p in raw_phones if p not in known_phones]
     phones = list(set(known_phones + raw_phones))
     for ph in new_phones:
-        db.query("MERGE (n:Phone {id: $ph}) SET n.number = $ph", {"ph": ph})
-        audit.log("ADD_ENTITY", {"type": "Phone", "id": ph})
+        db.query(
+            "MERGE (n:Phone {id: $ph, case_id: $case_id}) SET n.number = $ph",
+            {"ph": ph, "case_id": case_id},
+        )
+        audit.log(case_id, "ADD_ENTITY", {"type": "Phone", "id": ph})
 
     # --- RELATIONSHIP MAPPING ---
     known_locations_set = set(locations)
@@ -181,71 +202,73 @@ def run_ingestion(fir_text: str, cdr_text: str, append_mode: bool):
         if len(present_people) >= 2:
             # Unordered pairs only: combinations() yields each pair once, so a
             # sentence mentioning A and B creates a single directed edge
-            # instead of both A->B and B->A (which Neo4j stores as two
-            # distinct relationships since they point in opposite directions).
+            # instead of both A->B and B->A.
             for p1, p2 in combinations(present_people, 2):
                 for rel_type in ["ASSOCIATE_OF", "FINANCIAL_TRAIL", "CDR_LINK"]:
                     if any(k in s_low for k in ext.TRIGGERS[rel_type]):
                         db.query(
-                            f"MATCH (a:Person {{id: $p1}}), (b:Person {{id: $p2}}) "
+                            f"MATCH (a:Person {{id: $p1, case_id: $case_id}}), "
+                            f"(b:Person {{id: $p2, case_id: $case_id}}) "
                             f"MERGE (a)-[r:{rel_type}]->(b) SET r.confidence = coalesce(r.confidence, 0) + 1, "
                             f"r.source_sentence = $sent",
-                            {"p1": p1, "p2": p2, "sent": sent.text.strip()},
+                            {"p1": p1, "p2": p2, "sent": sent.text.strip(), "case_id": case_id},
                         )
-                        audit.log("ADD_RELATIONSHIP", {"type": rel_type, "from": p1, "to": p2})
+                        audit.log(case_id, "ADD_RELATIONSHIP", {"type": rel_type, "from": p1, "to": p2})
 
         for l in present_locs:
             for p in present_people:
                 db.query(
-                    "MATCH (a:Person {id: $p}), (b:Location {id: $l}) "
+                    "MATCH (a:Person {id: $p, case_id: $case_id}), (b:Location {id: $l, case_id: $case_id}) "
                     "MERGE (a)-[r:SPOTTED_AT]->(b) SET r.confidence = coalesce(r.confidence, 0) + 1",
-                    {"p": p, "l": l},
+                    {"p": p, "l": l, "case_id": case_id},
                 )
-                audit.log("ADD_RELATIONSHIP", {"type": "SPOTTED_AT", "from": p, "to": l})
+                audit.log(case_id, "ADD_RELATIONSHIP", {"type": "SPOTTED_AT", "from": p, "to": l})
             for v in present_vhs:
                 db.query(
-                    "MATCH (a:Vehicle {id: $v}), (b:Location {id: $l}) MERGE (a)-[:CAMERA_LOG]->(b)",
-                    {"v": v, "l": l},
+                    "MATCH (a:Vehicle {id: $v, case_id: $case_id}), (b:Location {id: $l, case_id: $case_id}) "
+                    "MERGE (a)-[:CAMERA_LOG]->(b)",
+                    {"v": v, "l": l, "case_id": case_id},
                 )
-                audit.log("ADD_RELATIONSHIP", {"type": "CAMERA_LOG", "from": v, "to": l})
+                audit.log(case_id, "ADD_RELATIONSHIP", {"type": "CAMERA_LOG", "from": v, "to": l})
 
         for o in present_orgs:
             for p in present_people:
                 db.query(
-                    "MATCH (a:Person {id: $p}), (b:Organization {id: $o}) "
+                    "MATCH (a:Person {id: $p, case_id: $case_id}), (b:Organization {id: $o, case_id: $case_id}) "
                     "MERGE (a)-[r:ASSOCIATED_WITH]->(b) SET r.confidence = coalesce(r.confidence, 0) + 1",
-                    {"p": p, "o": o},
+                    {"p": p, "o": o, "case_id": case_id},
                 )
-                audit.log("ADD_RELATIONSHIP", {"type": "ASSOCIATED_WITH", "from": p, "to": o})
+                audit.log(case_id, "ADD_RELATIONSHIP", {"type": "ASSOCIATED_WITH", "from": p, "to": o})
 
         for ph in present_phs:
             for p in present_people:
                 if any(k in s_low for k in ext.TRIGGERS["USES_DEVICE"]):
                     db.query(
-                        "MATCH (a:Person {id: $p}), (b:Phone {id: $ph}) MERGE (a)-[:USES_DEVICE]->(b)",
-                        {"p": p, "ph": ph},
+                        "MATCH (a:Person {id: $p, case_id: $case_id}), (b:Phone {id: $ph, case_id: $case_id}) "
+                        "MERGE (a)-[:USES_DEVICE]->(b)",
+                        {"p": p, "ph": ph, "case_id": case_id},
                     )
-                    audit.log("ADD_RELATIONSHIP", {"type": "USES_DEVICE", "from": p, "to": ph})
+                    audit.log(case_id, "ADD_RELATIONSHIP", {"type": "USES_DEVICE", "from": p, "to": ph})
 
         if len(present_phs) >= 2:
-            # Same unordered-pair fix as above, for phone-to-phone call links.
             for ph1, ph2 in combinations(present_phs, 2):
                 if any(k in s_low for k in ext.TRIGGERS["INTERCEPTED_CALL"]):
                     db.query(
-                        "MATCH (a:Phone {id: $ph1}), (b:Phone {id: $ph2}) "
+                        "MATCH (a:Phone {id: $ph1, case_id: $case_id}), (b:Phone {id: $ph2, case_id: $case_id}) "
                         "MERGE (a)-[r:INTERCEPTED_CALL]->(b) SET r.confidence = coalesce(r.confidence, 0) + 1",
-                        {"ph1": ph1, "ph2": ph2},
+                        {"ph1": ph1, "ph2": ph2, "case_id": case_id},
                     )
-                    audit.log("ADD_RELATIONSHIP", {"type": "INTERCEPTED_CALL", "from": ph1, "to": ph2})
+                    audit.log(case_id, "ADD_RELATIONSHIP", {"type": "INTERCEPTED_CALL", "from": ph1, "to": ph2})
 
         if present_people and present_vhs and any(k in s_low for k in ext.TRIGGERS["OWNS_VEHICLE"]):
             for p in present_people:
                 for v in present_vhs:
                     db.query(
-                        "MATCH (a:Person {id: $p}), (b:Vehicle {id: $v}) MERGE (a)-[:OWNS_VEHICLE]->(b)",
-                        {"p": p, "v": v},
+                        "MATCH (a:Person {id: $p, case_id: $case_id}), (b:Vehicle {id: $v, case_id: $case_id}) "
+                        "MERGE (a)-[:OWNS_VEHICLE]->(b)",
+                        {"p": p, "v": v, "case_id": case_id},
                     )
-                    audit.log("ADD_RELATIONSHIP", {"type": "OWNS_VEHICLE", "from": p, "to": v})
+                    audit.log(case_id, "ADD_RELATIONSHIP", {"type": "OWNS_VEHICLE", "from": p, "to": v})
 
     return {
         "people": people,
