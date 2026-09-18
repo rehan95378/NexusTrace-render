@@ -6,6 +6,8 @@ import os
 load_dotenv()
 
 from utils.neo4j_driver import verify_connectivity
+from routers import ingest, entities, graph, analysis, audit
+from services.extraction import get_nlp
 
 app = FastAPI(title="SIH26189 Backend")
 
@@ -17,6 +19,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(ingest.router)
+app.include_router(entities.router)
+app.include_router(graph.router)
+app.include_router(analysis.router)
+app.include_router(audit.router)
+
+
+@app.on_event("startup")
+def warm_up():
+    # Load the spaCy model once at startup rather than on the first request,
+    # so the first /ingest call isn't slow (and to fail fast if it's missing).
+    get_nlp()
 
 
 @app.get("/health")

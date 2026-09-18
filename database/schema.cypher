@@ -14,6 +14,13 @@ FOR (n:Entity) ON (n.type);
 CREATE INDEX entity_name_index IF NOT EXISTS
 FOR (n:Entity) ON (n.name);
 
-// Note: relationships (CO_OCCURRED etc.) don't need a schema up front in Neo4j —
-// they're created dynamically when data is ingested. Add relationship property
-// indexes here later if query performance needs it (e.g. on source_document_id).
+// Tamper-evident audit log (see backend/services/audit.py). Entries are
+// ordered by seq rather than timestamp, since two writes in the same
+// ingestion request can share a timestamp.
+CREATE CONSTRAINT audit_seq_unique IF NOT EXISTS
+FOR (a:AuditEntry) REQUIRE a.seq IS UNIQUE;
+
+// Note: relationships (ASSOCIATE_OF, FINANCIAL_TRAIL, SPOTTED_AT, etc.) don't
+// need a schema up front in Neo4j — they're created dynamically at ingest
+// time by backend/services/pipeline.py. Add relationship property indexes
+// here later if query performance needs it (e.g. on confidence).
