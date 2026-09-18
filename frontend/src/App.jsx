@@ -22,6 +22,7 @@ export default function App() {
   const [resetKey, setResetKey] = useState(0)
   const [health, setHealth] = useState(null)
   const [resetting, setResetting] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'unreachable' }))
@@ -29,6 +30,11 @@ export default function App() {
 
   const bumpRefresh = () => setRefreshKey((k) => k + 1)
   const activeTab = TABS.find((t) => t.key === tab)
+
+  function selectTab(key) {
+    setTab(key)
+    setSidebarOpen(false)
+  }
 
   async function handleReset() {
     if (!window.confirm('This will permanently wipe the graph and audit log. Continue?')) {
@@ -38,8 +44,8 @@ export default function App() {
     try {
       await api.clear()
       bumpRefresh()
-      setResetKey((k) => k + 1) // remounts Ingestion, clearing its pasted text
-      setTab('ingestion')
+      setResetKey((k) => k + 1)
+      selectTab('ingestion')
     } catch (err) {
       window.alert(`Reset failed: ${err.message}`)
     } finally {
@@ -47,9 +53,25 @@ export default function App() {
     }
   }
 
+  const isGraphTab = tab === 'graph'
+
   return (
     <div className="app-shell">
-      <nav className="case-nav">
+      <button
+        className="menu-toggle"
+        onClick={() => setSidebarOpen((o) => !o)}
+        aria-label="Toggle case menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <nav className={`case-nav ${sidebarOpen ? 'open' : ''}`}>
         <div className="case-nav__header">
           <div className="case-nav__case-no">SIH26189</div>
           <h1 className="case-nav__title">Crime Network Analysis</h1>
@@ -58,7 +80,7 @@ export default function App() {
           <button
             key={t.key}
             className={`case-nav__item ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => selectTab(t.key)}
           >
             {t.label}
           </button>
@@ -76,7 +98,7 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="main">
+      <main className={`main ${isGraphTab ? 'main--graph' : ''}`}>
         <div className="topbar">
           <h1>{activeTab.title}</h1>
         </div>
