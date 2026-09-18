@@ -15,17 +15,19 @@ COLOR_MAP = {
 
 def node_key(label, id_):
     # Keying on (label, id) rather than just id makes every node's identity
-    # unambiguous, since ids are raw text and two different entity types
-    # could otherwise coincidentally share the same id string.
+    # unambiguous within a case, since ids are raw text and two different
+    # entity types could otherwise coincidentally share the same id string.
     return f"{label}:{id_}"
 
 
-@router.get("/graph")
-def get_graph():
+@router.get("/cases/{case_id}/graph")
+def get_graph(case_id: str):
     results = db.query(
-        "MATCH (n)-[r]->(m) RETURN n.id AS n_id, labels(n) AS n_labels, "
+        "MATCH (n {case_id: $case_id})-[r]->(m {case_id: $case_id}) "
+        "RETURN n.id AS n_id, labels(n) AS n_labels, "
         "m.id AS m_id, labels(m) AS m_labels, type(r) AS rel_type, "
-        "coalesce(r.confidence, 1) AS confidence"
+        "coalesce(r.confidence, 1) AS confidence",
+        {"case_id": case_id},
     )
     nodes, edges, seen = [], [], set()
 

@@ -10,13 +10,13 @@ const COLUMNS = [
   { key: 'organizations', label: 'Organizations', cls: 'org' },
 ]
 
-export default function Entities({ refreshKey }) {
+export default function Entities({ caseId, refreshKey }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.entities().then(setData).catch((e) => setError(e.message))
-  }, [refreshKey])
+    api.entities(caseId).then(setData).catch((e) => setError(e.message))
+  }, [caseId, refreshKey])
 
   if (error) return <Panel title="Extracted Entity Profiles"><div className="alert-row">{error}</div></Panel>
   if (!data) return <Panel title="Extracted Entity Profiles"><p className="empty-state">Loading…</p></Panel>
@@ -24,13 +24,13 @@ export default function Entities({ refreshKey }) {
   if (!data.is_processed) {
     return (
       <Panel title="Extracted Entity Profiles">
-        <p className="empty-state">Ingestion channels clear. Run extraction on the Ingestion tab first.</p>
+        <p className="empty-state">This case is empty. Run extraction on the Ingestion tab first.</p>
       </Panel>
     )
   }
 
   return (
-    <Panel title="Extracted Entity Profiles" hint="Isolated cross-channel entities currently in the graph.">
+    <Panel title="Extracted Entity Profiles" hint="Isolated cross-channel entities currently in this case's graph.">
       <div className="grid cols-3">
         {COLUMNS.map((col) => (
           <div key={col.key}>

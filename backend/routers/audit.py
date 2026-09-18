@@ -5,11 +5,11 @@ from services import audit
 router = APIRouter()
 
 
-@router.get("/audit")
-def get_audit(limit: int = 200):
-    valid, broken_entry = audit.verify_chain()
+@router.get("/cases/{case_id}/audit")
+def get_audit(case_id: str, limit: int = 200):
+    valid, broken_entry = audit.verify_chain(case_id)
     return {
         "valid": valid,
         "broken_entry": broken_entry,
-        "entries": audit.list_entries(limit=limit),
+        "entries": audit.list_entries(case_id, limit=limit),
     }

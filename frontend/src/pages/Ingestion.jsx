@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
-export default function Ingestion({ onIngested }) {
+export default function Ingestion({ caseId, onIngested }) {
   const [firText, setFirText] = useState('')
   const [cdrText, setCdrText] = useState('')
   const [appendMode, setAppendMode] = useState(false)
@@ -15,7 +15,7 @@ export default function Ingestion({ onIngested }) {
     }
     setStatus({ kind: 'busy', message: 'Processing cross-channel inputs…' })
     try {
-      const result = await api.ingest(firText, cdrText, appendMode)
+      const result = await api.ingest(caseId, firText, cdrText, appendMode)
       if (!result.ok) {
         setStatus({ kind: 'error', message: result.error })
         return
@@ -27,7 +27,7 @@ export default function Ingestion({ onIngested }) {
         `${result.phones.length} phones`,
         `${result.organizations.length} organizations`,
       ]
-      let msg = `Fused. Graph now holds ${parts.join(', ')}.`
+      let msg = `Fused. Case graph now holds ${parts.join(', ')}.`
       if (result.tabular_cdr_detected) {
         msg += ` Detected tabular CDR format — parsed ${result.tabular_numbers_parsed} numbers directly.`
       }
@@ -38,11 +38,11 @@ export default function Ingestion({ onIngested }) {
     }
   }
 
-  async function clearDatabase() {
-    setStatus({ kind: 'busy', message: 'Wiping database and audit log…' })
+  async function clearCase() {
+    setStatus({ kind: 'busy', message: 'Wiping this case\u2019s graph and audit log…' })
     try {
-      await api.clear()
-      setStatus({ kind: 'success', message: 'Database and audit log wiped clean.' })
+      await api.clearCase(caseId)
+      setStatus({ kind: 'success', message: 'This case\u2019s graph and audit log are wiped clean.' })
       onIngested?.()
     } catch (err) {
       setStatus({ kind: 'error', message: err.message })
@@ -53,7 +53,7 @@ export default function Ingestion({ onIngested }) {
     <>
       <Panel
         title="Multi-Channel Ingestion"
-        hint="Paste any combination of text blocks from your reference dossiers below to trigger network mapping."
+        hint="Paste any combination of text blocks from your reference dossiers below to trigger network mapping for this case."
       >
         <div className="grid cols-2">
           <div>
@@ -84,15 +84,15 @@ export default function Ingestion({ onIngested }) {
             checked={appendMode}
             onChange={(e) => setAppendMode(e.target.checked)}
           />
-          Append new report to existing graph (live-update)
+          Append new report to this case's existing graph (live-update)
         </label>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
           <button className="primary" onClick={runIngestion} disabled={status?.kind === 'busy'}>
             Run extraction
           </button>
-          <button className="danger" onClick={clearDatabase} disabled={status?.kind === 'busy'}>
-            Clear database
+          <button className="danger" onClick={clearCase} disabled={status?.kind === 'busy'}>
+            Clear this case
           </button>
         </div>
 

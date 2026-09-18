@@ -33,15 +33,36 @@ def query(cypher_query, parameters=None):
 
 
 def clear_database():
+    """Full nuke — every case, every entity, every audit entry. Not exposed
+    via any API route; kept only for local dev/reset scripts."""
     query("MATCH (n) DETACH DELETE n")
 
 
-def fetch_graph_edges():
-    """All relationships as (src, tgt, rel, labels) tuples, used by analysis + graph views."""
+def clear_case(case_id):
+    """Delete all entities and relationships belonging to one case (but not
+    the :Case node itself, and not other cases' data)."""
+    query(
+        "MATCH (n {case_id: $case_id}) WHERE NOT n:Case DETACH DELETE n",
+        {"case_id": case_id},
+    )
+
+
+def delete_case(case_id):
+    """Delete a case entirely: its entities, its audit log, and the :Case
+    node itself."""
+    query("MATCH (n {case_id: $case_id}) DETACH DELETE n", {"case_id": case_id})
+    query("MATCH (c:Case {id: $case_id}) DETACH DELETE c", {"case_id": case_id})
+
+
+def fetch_graph_edges(case_id):
+    """All relationships within one case, as (src, tgt, rel, labels) tuples,
+    used by analysis + graph views."""
     return query(
-        "MATCH (n)-[r]->(m) RETURN n.id AS src, m.id AS tgt, type(r) AS rel, "
+        "MATCH (n {case_id: $case_id})-[r]->(m {case_id: $case_id}) "
+        "RETURN n.id AS src, m.id AS tgt, type(r) AS rel, "
         "labels(n) AS src_labels, labels(m) AS tgt_labels, "
-        "coalesce(r.confidence, 1) AS confidence"
+        "coalesce(r.confidence, 1) AS confidence",
+        {"case_id": case_id},
     )
 
 
