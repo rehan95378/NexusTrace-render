@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { DataSet } from 'vis-data'
 import { Network } from 'vis-network'
 import Panel from '../components/Panel'
+import NodeDetailsPanel from '../components/NodeDetailsPanel'
 import { api } from '../api'
 
 export default function GraphView({ caseId, refreshKey }) {
@@ -9,9 +10,12 @@ export default function GraphView({ caseId, refreshKey }) {
   const networkRef = useRef(null)
   const [empty, setEmpty] = useState(false)
   const [error, setError] = useState(null)
+  const [selected, setSelected] = useState(null) // { type, id, position }
+  const [bump, setBump] = useState(0)
 
   useEffect(() => {
     let cancelled = false
+    setSelected(null)
 
     api.graph(caseId).then(({ nodes, edges }) => {
       if (cancelled) return
@@ -59,18 +63,74 @@ export default function GraphView({ caseId, refreshKey }) {
       }
       const network = new Network(containerRef.current, { nodes: visNodes, edges: visEdges }, options)
       networkRef.current = network
+
+      // Physics settles the initial layout, then turns off so the graph
+      // stays put instead of jittering forever — re-enabled only around an
+      // active drag so dragging a node still feels physical.
+      network.once('stabilizationIterationsDone', () => {
+        network.setOptions({ physics: false })
+      })
+      network.on('dragStart', () => network.setOptions({ physics: true }))
+      network.on('dragEnd', () => network.setOptions({ physics: false }))
+
+      network.on('click', (params) => {
+        if (params.nodes.length === 0) {
+          setSelected(null)
+          return
+        }
+        const nodeId = params.nodes[0] // "Type:actual_id"
+        const sep = nodeId.indexOf(':')
+        const type = nodeId.slice(0, sep)
+        const id = nodeId.slice(sep + 1)
+        const canvasPos = network.getPositions([nodeId])[nodeId]
+        const domPos = network.canvasToDOM(canvasPos)
+
+        const PANEL_WIDTH = 280
+        const PANEL_MAX_HEIGHT = 420
+        const bounds = containerRef.current.getBoundingClientRect()
+
+        let x = domPos.x + 18
+        let y = domPos.y
+        // Flip to the node's left if there isn't room on the right.
+        if (x + PANEL_WIDTH > bounds.width) {
+          x = domPos.x - PANEL_WIDTH - 18
+        }
+        // Clamp vertically so the panel never runs past the canvas bottom
+        // (or above the top) — this is what was getting clipped before.
+        y = Math.max(0, Math.min(y, bounds.height - PANEL_MAX_HEIGHT))
+        x = Math.max(0, x)
+
+        setSelected({ type, id, position: { x, y } })
+      })
     }).catch((e) => setError(e.message))
 
     return () => {
       cancelled = true
     }
-  }, [caseId, refreshKey])
+  }, [caseId, refreshKey, bump])
+
+  function handleChanged() {
+    // Re-fetch the graph after an edit/delete/merge from the details panel.
+    setBump((b) => b + 1)
+  }
 
   return (
-    <Panel title="Evidence Graph Map" hint="Force-directed map of every entity and relationship currently in this case's graph.">
+    <Panel title="Evidence Graph Map" hint="Force-directed map of every entity and relationship currently in this case's graph. Click a node for details.">
       {error && <div className="alert-row">{error}</div>}
       {empty && !error && <p className="empty-state">Canvas empty. Run ingestion in the Ingestion tab first.</p>}
-      <div id="graph-canvas" ref={containerRef} style={{ display: empty || error ? 'none' : 'block' }} />
+      <div className={`graph-canvas-wrap${empty || error ? ' graph-canvas-wrap--hidden' : ''}`}>
+        <div id="graph-canvas" ref={containerRef} />
+        {selected && (
+          <NodeDetailsPanel
+            caseId={caseId}
+            type={selected.type}
+            id={selected.id}
+            position={selected.position}
+            onClose={() => setSelected(null)}
+            onChanged={handleChanged}
+          />
+        )}
+      </div>
     </Panel>
   )
 }

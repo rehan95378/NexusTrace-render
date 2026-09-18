@@ -40,4 +40,29 @@ export const api = {
   keyPlayers: (caseId) => request(`/cases/${caseId}/analysis/key-players`),
   anomalies: (caseId) => request(`/cases/${caseId}/analysis/anomalies`),
   audit: (caseId) => request(`/cases/${caseId}/audit`),
+
+  // Node click-for-details panel: manual entity + relationship CRUD
+  entityDetail: (caseId, type, id) =>
+    request(`/cases/${caseId}/entities/${type}/${encodeURIComponent(id)}`),
+  addEntity: (caseId, type, value) =>
+    request(`/cases/${caseId}/entities/manual`, {
+      method: 'POST',
+      body: JSON.stringify({ type, value }),
+    }),
+  renameEntity: (caseId, type, id, value) =>
+    request(`/cases/${caseId}/entities/${type}/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ value }),
+    }),
+  deleteEntity: (caseId, type, id) =>
+    request(`/cases/${caseId}/entities/${type}/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  mergeEntity: (caseId, type, id, mergeWith) =>
+    request(`/cases/${caseId}/entities/${type}/${encodeURIComponent(id)}/merge`, {
+      method: 'POST',
+      body: JSON.stringify({ merge_with: mergeWith }),
+    }),
+  addRelationship: (caseId, payload) =>
+    request(`/cases/${caseId}/relationships`, { method: 'POST', body: JSON.stringify(payload) }),
+  deleteRelationship: (caseId, payload) =>
+    request(`/cases/${caseId}/relationships`, { method: 'DELETE', body: JSON.stringify(payload) }),
 }
