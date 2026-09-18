@@ -32,7 +32,7 @@
 ### Backend
 ```bash
 cd backend
-python -m venv venv && source venv/bin/activate  # Windows: venv\Scripts\activate
+python -m venv venv && source venv/bin/activate 
 pip install -r requirements.txt --break-system-packages
 cp .env.example .env   # fill in your real Neo4j credentials
 python -m uvicorn main:app --reload --port 8000
