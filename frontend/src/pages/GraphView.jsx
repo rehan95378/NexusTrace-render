@@ -230,29 +230,26 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
           flexShrink: 0
         }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Mode selector */}
+            {/* Single dropdown for case selection */}
             <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              style={{ padding: '4px 8px', fontSize: '0.9em' }}
+              value={isAllCases ? '__all__' : selectedCaseId}
+              onChange={(e) => {
+                if (e.target.value === '__all__') {
+                  setMode('all-cases')
+                  setSelectedCaseId('')
+                } else {
+                  setMode('this-case')
+                  setSelectedCaseId(e.target.value)
+                }
+              }}
+              style={{ padding: '4px 8px', fontSize: '0.9em', minWidth: 180 }}
             >
-              <option value="all-cases">All cases</option>
-              <option value="this-case">Single case</option>
+              <option value="">Select case…</option>
+              <option value="__all__">All cases</option>
+              {cases.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
             </select>
-
-            {/* Case selector - only show for single case mode */}
-            {mode === 'this-case' && (
-              <select
-                value={selectedCaseId}
-                onChange={(e) => setSelectedCaseId(e.target.value)}
-                style={{ padding: '4px 8px', fontSize: '0.9em' }}
-              >
-                <option value="">Select case…</option>
-                {cases.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            )}
 
             <button
               className="primary"
@@ -313,43 +310,29 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
   return (
     <Panel title="Evidence Graph Map" hint={isAllCases ? "Combined graph across cases. Dashed edges = cross-case links." : "Force-directed map of entities in the selected case."}>
       <div style={{ marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div>
-          <label style={{ marginRight: 8 }}>
-            <input
-              type="radio"
-              value="this-case"
-              checked={mode === 'this-case'}
-              onChange={(e) => setMode(e.target.value)}
-            />
-            This case
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="all-cases"
-              checked={mode === 'all-cases'}
-              onChange={(e) => setMode(e.target.value)}
-            />
-            All cases
-          </label>
-        </div>
+        <select
+          value={isAllCases ? '__all__' : selectedCaseId}
+          onChange={(e) => {
+            if (e.target.value === '__all__') {
+              setMode('all-cases')
+              setSelectedCaseId('')
+            } else {
+              setMode('this-case')
+              setSelectedCaseId(e.target.value)
+            }
+          }}
+          style={{ padding: '6px 12px', minWidth: 250 }}
+        >
+          <option value="">Select a case…</option>
+          <option value="__all__">All cases</option>
+          {cases.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
 
-        {mode === 'this-case' && (
-          <select
-            value={selectedCaseId}
-            onChange={(e) => setSelectedCaseId(e.target.value)}
-            style={{ padding: '6px 12px', minWidth: 250 }}
-          >
-            <option value="">Select a case…</option>
-            {cases.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {mode === 'all-cases' && cases.length > 0 && (
+        {isAllCases && cases.length > 0 && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: '0.9em', color: '#8fa0a3' }}>Show:</span>
             {cases.map((c) => (
