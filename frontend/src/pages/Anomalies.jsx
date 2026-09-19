@@ -41,41 +41,27 @@ export default function Anomalies({ refreshKey }) {
   const isAllCases = mode === 'all-cases'
   const scopeControls = (
     <div style={{ marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center' }}>
-      <div>
-        <label style={{ marginRight: 8 }}>
-          <input
-            type="radio"
-            value="this-case"
-            checked={mode === 'this-case'}
-            onChange={(e) => setMode(e.target.value)}
-          />
-          This case
-        </label>
-        <label>
-          <input
-            type="radio"
-            value="all-cases"
-            checked={mode === 'all-cases'}
-            onChange={(e) => setMode(e.target.value)}
-          />
-          All cases
-        </label>
-      </div>
-
-      {mode === 'this-case' && (
-        <select
-          value={selectedCaseId}
-          onChange={(e) => setSelectedCaseId(e.target.value)}
-          style={{ padding: '6px 12px', minWidth: 250 }}
-        >
-          <option value="">Select a case…</option>
-          {cases.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      )}
+      <select
+        value={isAllCases ? '__all__' : selectedCaseId}
+        onChange={(e) => {
+          if (e.target.value === '__all__') {
+            setMode('all-cases')
+            setSelectedCaseId('')
+          } else {
+            setMode('this-case')
+            setSelectedCaseId(e.target.value)
+          }
+        }}
+        style={{ padding: '6px 12px', minWidth: 250 }}
+      >
+        <option value="">Select a case…</option>
+        <option value="__all__">All cases</option>
+        {cases.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
     </div>
   )
 
@@ -89,7 +75,11 @@ export default function Anomalies({ refreshKey }) {
   if (!data) return (
     <Panel title="Suspicious Pattern Detection">
       {scopeControls}
-      <p className="empty-state">Loading…</p>
+      <p className="empty-state">
+        {mode === 'this-case' && !selectedCaseId
+          ? 'Select a case to view anomaly detection.'
+          : 'Loading…'}
+      </p>
     </Panel>
   )
 

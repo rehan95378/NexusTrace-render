@@ -45,46 +45,36 @@ export default function KeyPlayers({ refreshKey }) {
       title="Key Player Identification"
       hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}
     >
-      <div style={{ marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center' }}>
-        <div>
-          <label style={{ marginRight: 8 }}>
-            <input
-              type="radio"
-              value="this-case"
-              checked={mode === 'this-case'}
-              onChange={(e) => setMode(e.target.value)}
-            />
-            This case
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="all-cases"
-              checked={mode === 'all-cases'}
-              onChange={(e) => setMode(e.target.value)}
-            />
-            All cases
-          </label>
-        </div>
-
-        {mode === 'this-case' && (
-          <select
-            value={selectedCaseId}
-            onChange={(e) => setSelectedCaseId(e.target.value)}
-            style={{ padding: '6px 12px', minWidth: 250 }}
-          >
-            <option value="">Select a case…</option>
-            {cases.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+      <select
+        value={isAllCases ? '__all__' : selectedCaseId}
+        onChange={(e) => {
+          if (e.target.value === '__all__') {
+            setMode('all-cases')
+            setSelectedCaseId('')
+          } else {
+            setMode('this-case')
+            setSelectedCaseId(e.target.value)
+          }
+        }}
+        style={{ padding: '6px 12px', minWidth: 250, marginBottom: 16 }}
+      >
+        <option value="">Select a case…</option>
+        <option value="__all__">All cases</option>
+        {cases.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
 
       {error && <div className="alert-row">{error}</div>}
-      {!error && !data && <p className="empty-state">Loading…</p>}
+      {!error && !data && (
+        <p className="empty-state">
+          {mode === 'this-case' && !selectedCaseId
+            ? 'Select a case to view key player analysis.'
+            : 'Loading…'}
+        </p>
+      )}
       {data && data.message && <p className="empty-state">{data.message}</p>}
       {data && !data.message && (
         <div>

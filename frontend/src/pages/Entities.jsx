@@ -76,23 +76,56 @@ export default function Entities({ refreshKey }) {
 
   if (error) return (
     <Panel title="Extracted Entity Profiles">
+      <select
+        value={mode === 'all-cases' ? '__all__' : selectedCaseId}
+        onChange={(e) => {
+          if (e.target.value === '__all__') {
+            setMode('all-cases')
+            setSelectedCaseId('')
+          } else {
+            setMode('this-case')
+            setSelectedCaseId(e.target.value)
+          }
+        }}
+        style={{ padding: '6px 12px', minWidth: 250, marginBottom: 16 }}
+      >
+        <option value="">Select a case…</option>
+        <option value="__all__">All cases</option>
+        {cases.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
       <div className="alert-row">{error}</div>
     </Panel>
   )
 
   if (!data) {
-    // If we're in this-case mode but no case is selected, show a different message
-    if (mode === 'this-case' && !selectedCaseId) {
-      return (
-        <Panel title="Extracted Entity Profiles">
-          <p className="empty-state">Select a case to view its entity profiles.</p>
-        </Panel>
-      )
-    }
-
     return (
       <Panel title="Extracted Entity Profiles">
-        <p className="empty-state">Loading…</p>
+        <select
+          value={mode === 'all-cases' ? '__all__' : selectedCaseId}
+          onChange={(e) => {
+            if (e.target.value === '__all__') {
+              setMode('all-cases')
+              setSelectedCaseId('')
+            } else {
+              setMode('this-case')
+              setSelectedCaseId(e.target.value)
+            }
+          }}
+          style={{ padding: '6px 12px', minWidth: 250, marginBottom: 16 }}
+        >
+          <option value="">Select a case…</option>
+          <option value="__all__">All cases</option>
+          {cases.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <p className="empty-state">{mode === 'all-cases' ? 'Loading…' : 'Select a case to view its entity profiles.'}</p>
       </Panel>
     )
   }
@@ -111,43 +144,27 @@ export default function Entities({ refreshKey }) {
 
   return (
     <Panel title="Extracted Entity Profiles" hint={isAllCases ? "Entities across all cases." : "Entities in the selected case's graph."}>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center' }}>
-        <div>
-          <label style={{ marginRight: 8 }}>
-            <input
-              type="radio"
-              value="this-case"
-              checked={mode === 'this-case'}
-              onChange={(e) => setMode(e.target.value)}
-            />
-            This case
-          </label>
-          <label>
-            <input
-              type="radio"
-              value="all-cases"
-              checked={mode === 'all-cases'}
-              onChange={(e) => setMode(e.target.value)}
-            />
-            All cases
-          </label>
-        </div>
-
-        {mode === 'this-case' && (
-          <select
-            value={selectedCaseId}
-            onChange={(e) => setSelectedCaseId(e.target.value)}
-            style={{ padding: '6px 12px', minWidth: 250 }}
-          >
-            <option value="">Select a case…</option>
-            {cases.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
+      <select
+        value={isAllCases ? '__all__' : selectedCaseId}
+        onChange={(e) => {
+          if (e.target.value === '__all__') {
+            setMode('all-cases')
+            setSelectedCaseId('')
+          } else {
+            setMode('this-case')
+            setSelectedCaseId(e.target.value)
+          }
+        }}
+        style={{ padding: '6px 12px', minWidth: 250, marginBottom: 16 }}
+      >
+        <option value="">Select a case…</option>
+        <option value="__all__">All cases</option>
+        {cases.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
 
       {isAllCases ? (
         <div style={{ overflowX: 'auto' }}>
