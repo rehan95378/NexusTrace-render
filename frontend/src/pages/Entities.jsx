@@ -22,9 +22,13 @@ export default function Entities({ refreshKey }) {
   useEffect(() => {
     api.listCases().then((list) => {
       setCases(list)
+      // Try to restore last selected case
       const lastId = localStorage.getItem(LAST_CASE_KEY)
       if (lastId && list.find(c => c.id === lastId)) {
         setSelectedCaseId(lastId)
+      } else if (list.length > 0) {
+        // If no saved case or saved case not found, select the first case
+        setSelectedCaseId(list[0].id)
       }
     })
   }, [])
@@ -39,11 +43,35 @@ export default function Entities({ refreshKey }) {
     setData(null)
     setError(null)
 
-    if (mode === 'all-cases') {
-      api.allEntities().then(setData).catch((e) => setError(e.message))
-    } else if (selectedCaseId) {
-      api.entities(selectedCaseId).then(setData).catch((e) => setError(e.message))
+    const fetchData = async () => {
+      if (mode === 'all-cases') {
+        try {
+          const result = await api.allEntities()
+          console.log('All entities response:', result)
+          // Ensure result is an array
+          if (Array.isArray(result)) {
+            setData(result)
+          } else {
+            console.error('Expected array but got:', result)
+            setError('Invalid data format: expected array of entities')
+          }
+        } catch (e) {
+          console.error('Failed to load all entities:', e)
+          setError(`Failed to load entities: ${e.message}`)
+        }
+      } else if (selectedCaseId) {
+        try {
+          const result = await api.entities(selectedCaseId)
+          console.log('Case entities response:', result)
+          setData(result)
+        } catch (e) {
+          console.error('Failed to load case entities:', e)
+          setError(`Failed to load entities: ${e.message}`)
+        }
+      }
     }
+
+    fetchData()
   }, [mode, selectedCaseId, refreshKey])
 
   if (error) return (
@@ -52,11 +80,22 @@ export default function Entities({ refreshKey }) {
     </Panel>
   )
 
-  if (!data) return (
-    <Panel title="Extracted Entity Profiles">
-      <p className="empty-state">Loading…</p>
-    </Panel>
-  )
+  if (!data) {
+    // If we're in this-case mode but no case is selected, show a different message
+    if (mode === 'this-case' && !selectedCaseId) {
+      return (
+        <Panel title="Extracted Entity Profiles">
+          <p className="empty-state">Select a case to view its entity profiles.</p>
+        </Panel>
+      )
+    }
+
+    return (
+      <Panel title="Extracted Entity Profiles">
+        <p className="empty-state">Loading…</p>
+      </Panel>
+    )
+  }
 
   if (mode === 'this-case' && !data.is_processed) {
     return (
@@ -112,29 +151,30 @@ export default function Entities({ refreshKey }) {
 
       {isAllCases ? (
         <div style={{ overflowX: 'auto' }}>
-          <table className="entity-table">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Value</th>
-                <th>Case</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.length === 0 && (
+          {!Array.isArray(data) ? (
+            <p className="empty-state" style={{ color: 'red' }}>Error: Invalid data format (expected array)</p>
+          ) : data.length === 0 ? (
+            <p className="empty-state">No entities extracted yet across any cases. Run ingestion first.</p>
+          ) : (
+            <table className="entity-table">
+              <thead>
                 <tr>
-                  <td colSpan="3" style={{ textAlign: 'center' }}>No entities yet</td>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th>Case</th>
                 </tr>
-              )}
-              {data.map((entity, idx) => (
-                <tr key={idx}>
-                  <td><span className={`tag ${COLUMNS.find(c => c.key === entity.type + 's')?.cls || ''}`}>{entity.type}</span></td>
-                  <td>{entity.value}</td>
-                  <td>{entity.case_name || entity.case_id}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.map((entity, idx) => (
+                  <tr key={idx}>
+                    <td><span className={`tag ${COLUMNS.find(c => c.key === entity.type + 's')?.cls || ''}`}>{entity.type}</span></td>
+                    <td>{entity.value}</td>
+                    <td>{entity.case_name || entity.case_id}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       ) : (
         <div className="grid cols-3">

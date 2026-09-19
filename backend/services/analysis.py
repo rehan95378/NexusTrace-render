@@ -101,8 +101,9 @@ def key_players_all_cases(top_n=10):
     G, _ = _build_graph_all_cases(edge_records)
 
     # Get all Person nodes across all cases, with case_id for node identity
+    # Filter out nodes with null case_id (orphaned entities)
     person_nodes = {f"{r['case_id']}:{r['v']}" for r in db.query(
-        "MATCH (p:Person) RETURN p.case_id AS case_id, p.id AS v")}
+        "MATCH (p:Person) WHERE p.case_id IS NOT NULL RETURN p.case_id AS case_id, p.id AS v")}
 
     pagerank_scores = nx.pagerank(G) if G.number_of_nodes() > 0 else {}
     try:
