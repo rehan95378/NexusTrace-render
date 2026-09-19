@@ -116,6 +116,11 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
         return null
       }
 
+      // Filter out virtual cross-case links (they have match_kind and cannot be edited)
+      if (e.match_kind) {
+        return null
+      }
+
       let sType, sId, tType, tId, sCaseId, tCaseId
 
       try {
@@ -129,6 +134,13 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
           tCaseId = tParts[0]
           tType = tParts[1]
           tId = tParts.slice(2).join(':')
+
+          // Skip edges with invalid case IDs (e.g., "None" or empty)
+          if (!sCaseId || sCaseId === 'None' || sCaseId === 'null' ||
+              !tCaseId || tCaseId === 'None' || tCaseId === 'null') {
+            console.warn('Skipping edge with invalid case_id:', e)
+            return null
+          }
         } else {
           // Single-case format: "Type:id"
           const [sT, ...sRest] = e.source.split(':')
@@ -367,9 +379,11 @@ function RenameRelForm({ caseId, edgeOptions, onDone, guard }) {
       e.preventDefault()
       if (!edge) return
       guard(async () => {
-        await api.renameRelationship(caseId, {
+        // Use source case from the edge itself
+        await api.renameRelationship(edge.sCaseId, {
           source_type: edge.sType, source_id: edge.sId,
           target_type: edge.tType, target_id: edge.tId,
+          target_case_id: edge.tCaseId,  // Support cross-case
           old_rel_type: edge.relType, new_rel_type: newName,
         })
         const to = newName
@@ -474,9 +488,12 @@ function DeleteRelForm({ caseId, edgeOptions, onDone, guard }) {
       if (!edge) return
       if (!window.confirm('Delete this relationship?')) return
       guard(async () => {
-        await api.deleteRelationship(caseId, {
+        // Use source case from the edge itself
+        await api.deleteRelationship(edge.sCaseId, {
           source_type: edge.sType, source_id: edge.sId,
-          target_type: edge.tType, target_id: edge.tId, rel_type: edge.relType,
+          target_type: edge.tType, target_id: edge.tId,
+          target_case_id: edge.tCaseId,  // Support cross-case
+          rel_type: edge.relType,
         })
         setEdgeKey('')
         onDone('Relationship deleted.')

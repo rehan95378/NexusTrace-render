@@ -73,12 +73,12 @@ def fetch_all_graph_edges():
     Used by all-cases Key Players and Anomaly Detection."""
     from services import cross_case
 
-    # Within-case edges across all cases
+    # Within-case and manual cross-case edges across all cases
     # IMPORTANT: Node identifiers must be case_id:node_id format to keep
     # same-named entities in different cases distinct
     edges = []
     raw_edges = query(
-        "MATCH (n)-[r]->(m) WHERE n.case_id = m.case_id "
+        "MATCH (n)-[r]->(m) "
         "RETURN n.id AS src, n.case_id AS src_case, m.id AS tgt, "
         "m.case_id AS tgt_case, type(r) AS rel, "
         "labels(n) AS src_labels, labels(m) AS tgt_labels, "
