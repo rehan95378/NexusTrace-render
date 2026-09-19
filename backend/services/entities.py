@@ -114,34 +114,83 @@ def get_all_entities():
 
 def get_entity_detail(case_id, label, node_id):
     """Node's own data plus every relationship touching it, either direction.
-    Read-only — this is all the node-click popup on the graph shows."""
+    Read-only — this is all the node-click popup on the graph shows.
+    Enhanced: includes all node properties, case info, and cross-case links."""
     prop = _check_label(label)
+
+    # Get all properties of the node
     rows = db.query(
         f"MATCH (n:{label} {{id: $id, case_id: $case_id}}) "
-        f"RETURN n.id AS id, n.{prop} AS value",
+        f"RETURN properties(n) AS props",
         {"id": node_id, "case_id": case_id},
     )
     if not rows:
         return None
 
+    props = dict(rows[0]["props"])
+
+    # Get case name for display
+    case_rows = db.query(
+        "MATCH (c:Case {id: $case_id}) RETURN c.name AS case_name",
+        {"case_id": case_id}
+    )
+    case_name = case_rows[0]["case_name"] if case_rows else case_id
+
+    # Outgoing relationships (within case)
     outgoing = db.query(
         f"MATCH (n:{label} {{id: $id, case_id: $case_id}})-[r]->(m {{case_id: $case_id}}) "
         "RETURN type(r) AS rel_type, labels(m)[0] AS target_type, m.id AS target_id, "
-        "coalesce(r.confidence, 1) AS confidence",
+        "coalesce(r.confidence, 1) AS confidence, properties(r) AS rel_props",
         {"id": node_id, "case_id": case_id},
     )
+
+    # Incoming relationships (within case)
     incoming = db.query(
         f"MATCH (n:{label} {{id: $id, case_id: $case_id}})<-[r]-(m {{case_id: $case_id}}) "
         "RETURN type(r) AS rel_type, labels(m)[0] AS source_type, m.id AS source_id, "
-        "coalesce(r.confidence, 1) AS confidence",
+        "coalesce(r.confidence, 1) AS confidence, properties(r) AS rel_props",
         {"id": node_id, "case_id": case_id},
     )
+
+    # Cross-case outgoing relationships
+    cross_outgoing = db.query(
+        f"MATCH (n:{label} {{id: $id, case_id: $case_id}})-[r]->(m) "
+        "WHERE m.case_id <> $case_id AND m.case_id IS NOT NULL "
+        "RETURN type(r) AS rel_type, labels(m)[0] AS target_type, m.id AS target_id, "
+        "m.case_id AS target_case_id, coalesce(r.confidence, 1) AS confidence, properties(r) AS rel_props",
+        {"id": node_id, "case_id": case_id},
+    )
+
+    # Cross-case incoming relationships
+    cross_incoming = db.query(
+        f"MATCH (n:{label} {{id: $id, case_id: $case_id}})<-[r]-(m) "
+        "WHERE m.case_id <> $case_id AND m.case_id IS NOT NULL "
+        "RETURN type(r) AS rel_type, labels(m)[0] AS source_type, m.id AS source_id, "
+        "m.case_id AS source_case_id, coalesce(r.confidence, 1) AS confidence, properties(r) AS rel_props",
+        {"id": node_id, "case_id": case_id},
+    )
+
+    # Get audit trail for this entity
+    audit_rows = db.query(
+        "MATCH (a:AuditLog {case_id: $case_id}) "
+        "WHERE a.details.type = $type AND a.details.id = $id "
+        "RETURN a.action AS action, a.timestamp AS timestamp, a.details AS details "
+        "ORDER BY a.timestamp DESC LIMIT 10",
+        {"case_id": case_id, "type": label, "id": node_id},
+    )
+
     return {
         "type": label,
-        "id": rows[0]["id"],
-        "value": rows[0]["value"],
+        "id": node_id,
+        "value": props.get(prop, node_id),
+        "all_props": props,
+        "case_id": case_id,
+        "case_name": case_name,
         "outgoing": outgoing,
         "incoming": incoming,
+        "cross_outgoing": cross_outgoing,
+        "cross_incoming": cross_incoming,
+        "audit_trail": audit_rows,
     }
 
 
