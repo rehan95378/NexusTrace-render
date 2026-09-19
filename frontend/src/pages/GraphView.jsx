@@ -20,6 +20,7 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
   const [selected, setSelected] = useState(null)
   const [bump, setBump] = useState(0)
   const [editOpen, setEditOpen] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
 
   useEffect(() => {
     api.listCases().then((list) => {
@@ -204,6 +205,111 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
   const isAllCases = mode === 'all-cases'
   const currentCaseId = isAllCases ? null : selectedCaseId
 
+  if (fullscreen) {
+    return (
+      <div className="fullscreen" style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 1000,
+        background: '#0a0f12',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* Compact toolbar at top */}
+        <div style={{
+          display: 'flex',
+          gap: 8,
+          padding: '8px 12px',
+          background: '#161e24',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.85em',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Mode selector */}
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              style={{ padding: '4px 8px', fontSize: '0.9em' }}
+            >
+              <option value="all-cases">All cases</option>
+              <option value="this-case">Single case</option>
+            </select>
+
+            {/* Case selector - only show for single case mode */}
+            {mode === 'this-case' && (
+              <select
+                value={selectedCaseId}
+                onChange={(e) => setSelectedCaseId(e.target.value)}
+                style={{ padding: '4px 8px', fontSize: '0.9em' }}
+              >
+                <option value="">Select case…</option>
+                {cases.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            )}
+
+            <button
+              className="primary"
+              onClick={() => setEditOpen(true)}
+              style={{ padding: '4px 12px', fontSize: '0.9em' }}
+            >
+              Edit
+            </button>
+          </div>
+          <button
+            onClick={() => setFullscreen(false)}
+            style={{
+              background: '#2a3740',
+              border: 'none',
+              color: '#e7ece9',
+              padding: '4px 12px',
+              cursor: 'pointer',
+              fontSize: '0.9em',
+              borderRadius: '4px'
+            }}
+          >
+            Exit Fullscreen
+          </button>
+        </div>
+
+        {/* Full canvas - takes remaining space */}
+        <div className="graph-canvas-wrap" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {error && <div className="alert-row" style={{ position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10 }}>{error}</div>}
+          {empty && !error && <p className="empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>Canvas empty. Run ingestion first.</p>}
+          {!empty && !error && (
+            <>
+              <div id="graph-canvas" ref={containerRef} style={{ width: '100%', height: '100%' }} />
+              {selected && (
+                <NodeDetailsPanel
+                  caseId={selected.caseId}
+                  type={selected.type}
+                  id={selected.id}
+                  position={selected.position}
+                  onClose={() => setSelected(null)}
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        {editOpen && (
+          <GraphEditPanel
+            caseId={currentCaseId}
+            allCasesMode={isAllCases}
+            onClose={() => setEditOpen(false)}
+            onChanged={handleChanged}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <Panel title="Evidence Graph Map" hint={isAllCases ? "Combined graph across cases. Dashed edges = cross-case links." : "Force-directed map of entities in the selected case."}>
       <div style={{ marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -267,6 +373,13 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
           onClick={() => setEditOpen(true)}
         >
           Edit graph
+        </button>
+        <button
+          className="primary"
+          onClick={() => setFullscreen(true)}
+          style={{ marginLeft: 8 }}
+        >
+          Fullscreen
         </button>
         {isAllCases && <span style={{ fontSize: '0.85em', color: '#8fa0a3', marginLeft: 8 }}>Editing in all-cases mode allows cross-case linking</span>}
       </div>

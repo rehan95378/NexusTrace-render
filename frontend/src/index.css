@@ -423,6 +423,12 @@ button:disabled {
   border-radius: 3px;
 }
 
+/* Override for fullscreen mode */
+.fullscreen #graph-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* --- Case selector (shown when no case is active) --- */
 .app-loading {
   display: flex;
