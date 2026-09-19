@@ -36,14 +36,17 @@ export const api = {
     }),
   clearCase: (caseId) => request(`/cases/${caseId}/clear`, { method: 'POST' }),
   entities: (caseId) => request(`/cases/${caseId}/entities`),
+  relationshipTypeSuggestions: () => request('/relationship-type-suggestions'),
   graph: (caseId) => request(`/cases/${caseId}/graph`),
   keyPlayers: (caseId) => request(`/cases/${caseId}/analysis/key-players`),
   anomalies: (caseId) => request(`/cases/${caseId}/analysis/anomalies`),
   audit: (caseId) => request(`/cases/${caseId}/audit`),
 
-  // Node click-for-details panel: manual entity + relationship CRUD
+  // Node click popup: read-only entity detail
   entityDetail: (caseId, type, id) =>
     request(`/cases/${caseId}/entities/${type}/${encodeURIComponent(id)}`),
+
+  // "Edit graph" panel: manual entity + relationship CRUD
   addEntity: (caseId, type, value) =>
     request(`/cases/${caseId}/entities/manual`, {
       method: 'POST',
@@ -63,6 +66,8 @@ export const api = {
     }),
   addRelationship: (caseId, payload) =>
     request(`/cases/${caseId}/relationships`, { method: 'POST', body: JSON.stringify(payload) }),
+  renameRelationship: (caseId, payload) =>
+    request(`/cases/${caseId}/relationships`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteRelationship: (caseId, payload) =>
     request(`/cases/${caseId}/relationships`, { method: 'DELETE', body: JSON.stringify(payload) }),
 }

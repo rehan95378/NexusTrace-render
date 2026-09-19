@@ -669,3 +669,113 @@ button:disabled {
   min-height: 0;
   display: flex;
 }
+
+/* --- Graph toolbar (holds the "Edit graph" button) --- */
+.graph-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+/* --- Edit graph modal --- */
+.edit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+
+.edit-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.edit-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.edit-modal__header h2 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.edit-modal__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 20px 0;
+  flex-shrink: 0;
+}
+
+.edit-modal__tab {
+  font-size: 12px;
+  padding: 6px 10px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 3px;
+}
+
+.edit-modal__tab.active {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.edit-modal__body {
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+}
+
+.edit-modal .alert-row,
+.edit-modal .info-row {
+  margin: 12px 20px 0;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-form label {
+  margin-top: 8px;
+}
+
+.edit-form label:first-child {
+  margin-top: 0;
+}
+
+.edit-form select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 9px 12px;
+  border-radius: 3px;
+}
+
+.edit-form button {
+  margin-top: 14px;
+}

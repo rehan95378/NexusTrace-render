@@ -1,12 +1,22 @@
 """
-Manual entity/relationship CRUD, scoped to one case. Powers the node
-click-for-details panel and its add/edit/merge/delete actions.
+Manual entity/relationship CRUD, scoped to one case. Powers the graph's
+"Edit graph" panel: create/rename/delete/merge nodes, and create/rename/
+delete relationships (with a freely-chosen relationship name).
 
 Node identity stays consistent with pipeline.py: for a given label, the
 node's `id` property IS its identifying value (name/plate/number). So a
 "rename" has to update `id` itself, not just the display property — every
 relationship MATCH elsewhere in the app keys off `id`.
+
+Relationship types used to be restricted to a fixed VALID_REL_TYPES set.
+The "create relationship" and "rename relationship" features let the
+investigator name the relationship freely, so that restriction is gone —
+replaced with sanitize_rel_type(), which is still mandatory because Neo4j
+relationship types can't be parameterized: any type used in an interpolated
+Cypher string has to be validated to a safe identifier first.
 """
+import re
+
 from utils import neo4j_driver as db
 from services import audit
 
@@ -20,11 +30,14 @@ PROP_MAP = {
     "Organization": "name",
 }
 
-VALID_REL_TYPES = {
+# The relationship types the ingestion pipeline creates automatically.
+# Shown to the frontend as suggestions — manual relationships are no longer
+# restricted to this list, see sanitize_rel_type() below.
+REL_TYPE_SUGGESTIONS = sorted({
     "ASSOCIATE_OF", "FINANCIAL_TRAIL", "CDR_LINK", "SPOTTED_AT",
     "OWNS_VEHICLE", "USES_DEVICE", "INTERCEPTED_CALL", "ASSOCIATED_WITH",
     "CAMERA_LOG",
-}
+})
 
 
 def _check_label(label):
@@ -33,13 +46,21 @@ def _check_label(label):
     return PROP_MAP[label]
 
 
-def _check_rel_type(rel_type):
-    if rel_type not in VALID_REL_TYPES:
-        raise ValueError(f"Unknown relationship type: {rel_type}")
+def sanitize_rel_type(raw):
+    """Turn a free-text relationship name into a safe Neo4j relationship
+    type: upper-cased, non-alphanumeric runs collapsed to a single
+    underscore, guaranteed to start with a letter."""
+    cleaned = re.sub(r'[^A-Za-z0-9]+', '_', (raw or '').strip()).strip('_').upper()
+    if not cleaned:
+        raise ValueError("Relationship name is required.")
+    if not cleaned[0].isalpha():
+        cleaned = f"REL_{cleaned}"
+    return cleaned[:60]
 
 
 def get_entity_detail(case_id, label, node_id):
-    """Node's own data plus every relationship touching it, either direction."""
+    """Node's own data plus every relationship touching it, either direction.
+    Read-only — this is all the node-click popup on the graph shows."""
     prop = _check_label(label)
     rows = db.query(
         f"MATCH (n:{label} {{id: $id, case_id: $case_id}}) "
@@ -190,7 +211,7 @@ def merge_entities(case_id, label, keep_id, merge_id):
 def add_relationship(case_id, source_type, source_id, target_type, target_id, rel_type):
     _check_label(source_type)
     _check_label(target_type)
-    _check_rel_type(rel_type)
+    rel_type = sanitize_rel_type(rel_type)
     rows = db.query(
         f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}}), "
         f"(b:{target_type} {{id: $t, case_id: $case_id}}) "
@@ -204,12 +225,52 @@ def add_relationship(case_id, source_type, source_id, target_type, target_id, re
     audit.log(case_id, "ADD_RELATIONSHIP", {
         "type": rel_type, "from": source_id, "to": target_id, "source": "manual",
     })
+    return {"type": rel_type}
+
+
+def rename_relationship(case_id, source_type, source_id, target_type, target_id,
+                         old_rel_type, new_rel_type):
+    """Neo4j relationship types are immutable, so a "rename" is implemented
+    as delete-old + create-new, carrying the confidence value forward."""
+    _check_label(source_type)
+    _check_label(target_type)
+    old_rel_type = sanitize_rel_type(old_rel_type)
+    new_rel_type = sanitize_rel_type(new_rel_type)
+    if old_rel_type == new_rel_type:
+        return {"type": new_rel_type}
+
+    rows = db.query(
+        f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}})"
+        f"-[r:{old_rel_type}]->(b:{target_type} {{id: $t, case_id: $case_id}}) "
+        "RETURN coalesce(r.confidence, 1) AS confidence",
+        {"s": source_id, "t": target_id, "case_id": case_id},
+    )
+    if not rows:
+        raise LookupError("Relationship not found.")
+    confidence = rows[0]["confidence"]
+
+    db.query(
+        f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}})"
+        f"-[r:{old_rel_type}]->(b:{target_type} {{id: $t, case_id: $case_id}}) DELETE r",
+        {"s": source_id, "t": target_id, "case_id": case_id},
+    )
+    db.query(
+        f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}}), "
+        f"(b:{target_type} {{id: $t, case_id: $case_id}}) "
+        f"MERGE (a)-[r:{new_rel_type}]->(b) SET r.confidence = $confidence",
+        {"s": source_id, "t": target_id, "case_id": case_id, "confidence": confidence},
+    )
+    audit.log(case_id, "RENAME_RELATIONSHIP", {
+        "from_type": old_rel_type, "to_type": new_rel_type,
+        "source": source_id, "target": target_id,
+    })
+    return {"type": new_rel_type}
 
 
 def delete_relationship(case_id, source_type, source_id, target_type, target_id, rel_type):
     _check_label(source_type)
     _check_label(target_type)
-    _check_rel_type(rel_type)
+    rel_type = sanitize_rel_type(rel_type)
     db.query(
         f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}})"
         f"-[r:{rel_type}]->(b:{target_type} {{id: $t, case_id: $case_id}}) DELETE r",

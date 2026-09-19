@@ -152,7 +152,9 @@ export default function App() {
           <Ingestion key={resetKey} caseId={activeCase.id} onIngested={bumpRefresh} />
         )}
         {tab === 'entities' && <Entities caseId={activeCase.id} refreshKey={refreshKey} />}
-        {tab === 'graph' && <GraphView caseId={activeCase.id} refreshKey={refreshKey} />}
+        {tab === 'graph' && (
+          <GraphView caseId={activeCase.id} refreshKey={refreshKey} onGraphChanged={bumpRefresh} />
+        )}
         {tab === 'key-players' && <KeyPlayers caseId={activeCase.id} refreshKey={refreshKey} />}
         {tab === 'anomalies' && <Anomalies caseId={activeCase.id} refreshKey={refreshKey} />}
         {tab === 'audit' && <AuditTrail caseId={activeCase.id} refreshKey={refreshKey} />}

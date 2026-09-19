@@ -3,15 +3,17 @@ import { DataSet } from 'vis-data'
 import { Network } from 'vis-network'
 import Panel from '../components/Panel'
 import NodeDetailsPanel from '../components/NodeDetailsPanel'
+import GraphEditPanel from '../components/GraphEditPanel'
 import { api } from '../api'
 
-export default function GraphView({ caseId, refreshKey }) {
+export default function GraphView({ caseId, refreshKey, onGraphChanged }) {
   const containerRef = useRef(null)
   const networkRef = useRef(null)
   const [empty, setEmpty] = useState(false)
   const [error, setError] = useState(null)
-  const [selected, setSelected] = useState(null) // { type, id, position }
+  const [selected, setSelected] = useState(null) // { type, id, position } — click = details only
   const [bump, setBump] = useState(0)
+  const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -110,12 +112,18 @@ export default function GraphView({ caseId, refreshKey }) {
   }, [caseId, refreshKey, bump])
 
   function handleChanged() {
-    // Re-fetch the graph after an edit/delete/merge from the details panel.
+    // Re-fetch this case's graph, and tell the parent so Entities, Key
+    // Players, Anomalies, and the Audit Trail pick up the edit too.
     setBump((b) => b + 1)
+    onGraphChanged?.()
   }
 
   return (
-    <Panel title="Evidence Graph Map" hint="Force-directed map of every entity and relationship currently in this case's graph. Click a node for details.">
+    <Panel title="Evidence Graph Map" hint="Force-directed map of every entity and relationship currently in this case's graph. Click a node for its details.">
+      <div className="graph-toolbar">
+        <button className="primary" onClick={() => setEditOpen(true)}>Edit graph</button>
+      </div>
+
       {error && <div className="alert-row">{error}</div>}
       {empty && !error && <p className="empty-state">Canvas empty. Run ingestion in the Ingestion tab first.</p>}
       <div className={`graph-canvas-wrap${empty || error ? ' graph-canvas-wrap--hidden' : ''}`}>
@@ -127,10 +135,17 @@ export default function GraphView({ caseId, refreshKey }) {
             id={selected.id}
             position={selected.position}
             onClose={() => setSelected(null)}
-            onChanged={handleChanged}
           />
         )}
       </div>
+
+      {editOpen && (
+        <GraphEditPanel
+          caseId={caseId}
+          onClose={() => setEditOpen(false)}
+          onChanged={handleChanged}
+        />
+      )}
     </Panel>
   )
 }

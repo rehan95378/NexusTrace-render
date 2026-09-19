@@ -29,7 +29,14 @@ def get_entities(case_id: str):
     }
 
 
-# --- Manual node CRUD (powers the graph click-for-details panel) ---
+@router.get("/relationship-type-suggestions")
+def get_relationship_type_suggestions():
+    """Common relationship names to prefill the 'Create relationship' form
+    with — manual relationships are not restricted to this list."""
+    return {"suggestions": entity_service.REL_TYPE_SUGGESTIONS}
+
+
+# --- Manual node CRUD (powers the graph's Edit panel) ---
 
 class AddEntityRequest(BaseModel):
     type: str
@@ -105,10 +112,19 @@ class RelationshipRequest(BaseModel):
     rel_type: str
 
 
+class RenameRelationshipRequest(BaseModel):
+    source_type: str
+    source_id: str
+    target_type: str
+    target_id: str
+    old_rel_type: str
+    new_rel_type: str
+
+
 @router.post("/cases/{case_id}/relationships")
 def add_relationship(case_id: str, payload: RelationshipRequest):
     try:
-        entity_service.add_relationship(
+        result = entity_service.add_relationship(
             case_id, payload.source_type, payload.source_id,
             payload.target_type, payload.target_id, payload.rel_type,
         )
@@ -116,7 +132,22 @@ def add_relationship(case_id: str, payload: RelationshipRequest):
         raise HTTPException(404, str(e))
     except ValueError as e:
         raise HTTPException(400, str(e))
-    return {"ok": True}
+    return {"ok": True, **result}
+
+
+@router.patch("/cases/{case_id}/relationships")
+def rename_relationship(case_id: str, payload: RenameRelationshipRequest):
+    try:
+        result = entity_service.rename_relationship(
+            case_id, payload.source_type, payload.source_id,
+            payload.target_type, payload.target_id,
+            payload.old_rel_type, payload.new_rel_type,
+        )
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, **result}
 
 
 @router.delete("/cases/{case_id}/relationships")

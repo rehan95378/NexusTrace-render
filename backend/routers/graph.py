@@ -12,6 +12,8 @@ COLOR_MAP = {
     "Organization": "#6FCF6F",
 }
 
+NODE_LABELS = list(COLOR_MAP.keys())
+
 
 def node_key(label, id_):
     # Keying on (label, id) rather than just id makes every node's identity
@@ -22,6 +24,26 @@ def node_key(label, id_):
 
 @router.get("/cases/{case_id}/graph")
 def get_graph(case_id: str):
+    nodes, edges, seen = [], [], set()
+
+    # Every entity node for this case, regardless of whether it has any
+    # relationships yet — a freshly created node or one whose only
+    # relationship was just deleted still needs to show up on the canvas.
+    label_filter = " OR ".join(f"n:{label}" for label in NODE_LABELS)
+    node_rows = db.query(
+        f"MATCH (n {{case_id: $case_id}}) WHERE {label_filter} "
+        "RETURN n.id AS id, labels(n) AS labels",
+        {"case_id": case_id},
+    )
+    for record in node_rows:
+        label = record["labels"][0] if record["labels"] else "Unknown"
+        node_id = record["id"]
+        key = node_key(label, node_id)
+        if key not in seen:
+            nodes.append({"id": key, "label": f"{label}: {node_id}", "type": label,
+                          "color": COLOR_MAP.get(label, "#8A8A8A")})
+            seen.add(key)
+
     results = db.query(
         "MATCH (n {case_id: $case_id})-[r]->(m {case_id: $case_id}) "
         "RETURN n.id AS n_id, labels(n) AS n_labels, "
@@ -29,7 +51,6 @@ def get_graph(case_id: str):
         "coalesce(r.confidence, 1) AS confidence",
         {"case_id": case_id},
     )
-    nodes, edges, seen = [], [], set()
 
     for record in results:
         n_label = record["n_labels"][0] if record["n_labels"] else "Unknown"
@@ -37,6 +58,8 @@ def get_graph(case_id: str):
         n_id, m_id = record["n_id"], record["m_id"]
         n_key, m_key = node_key(n_label, n_id), node_key(m_label, m_id)
 
+        # Defensive: in case either endpoint wasn't picked up by the node
+        # query above for some reason, don't silently drop the edge.
         if n_key not in seen:
             nodes.append({"id": n_key, "label": f"{n_label}: {n_id}", "type": n_label,
                           "color": COLOR_MAP.get(n_label, "#8A8A8A")})
