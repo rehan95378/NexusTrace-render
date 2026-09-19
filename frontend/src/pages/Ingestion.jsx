@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
@@ -63,10 +64,10 @@ export default function Ingestion({ onIngested }) {
   }
 
   async function clearCase() {
-    setStatus({ kind: 'busy', message: 'Wiping this case\u2019s graph and audit log…' })
+    setStatus({ kind: 'busy', message: 'Wiping this case’s graph and audit log…' })
     try {
       await api.clearCase(selectedCaseId)
-      setStatus({ kind: 'success', message: 'This case\u2019s graph and audit log are wiped clean.' })
+      setStatus({ kind: 'success', message: 'This case’s graph and audit log are wiped clean.' })
       onIngested?.()
     } catch (err) {
       setStatus({ kind: 'error', message: err.message })
@@ -79,13 +80,15 @@ export default function Ingestion({ onIngested }) {
         title="Multi-Channel Ingestion"
         hint="Paste any combination of text blocks from your reference dossiers below to trigger network mapping for this case."
       >
-        <div style={{ marginBottom: 16 }}>
-          <label htmlFor="case-select">Case:</label>
+        <div className="mb-4">
+          <label htmlFor="case-select" className="block text-sm font-medium text-muted mb-1">
+            Case:
+          </label>
           <select
             id="case-select"
             value={selectedCaseId}
             onChange={(e) => setSelectedCaseId(e.target.value)}
-            style={{ marginLeft: 8, padding: '6px 12px', minWidth: 300 }}
+            className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
           >
             <option value="">Select a case…</option>
             {cases.map((c) => (
@@ -96,22 +99,28 @@ export default function Ingestion({ onIngested }) {
           </select>
         </div>
 
-        <div className="grid cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label htmlFor="fir">Raw FIR / Intelligence Field Report</label>
+            <label htmlFor="fir" className="block text-sm font-medium text-muted mb-1">
+              Raw FIR / Intelligence Field Report
+            </label>
             <textarea
               id="fir"
-              rows={12}
+              rows={4}
+              className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none"
               placeholder="Paste FIR / field report text…"
               value={firText}
               onChange={(e) => setFirText(e.target.value)}
             />
           </div>
           <div>
-            <label htmlFor="cdr">Call Log / CDR / Ledger Summary</label>
+            <label htmlFor="cdr" className="block text-sm font-medium text-muted mb-1">
+              Call Log / CDR / Ledger Summary
+            </label>
             <textarea
               id="cdr"
-              rows={12}
+              rows={4}
+              className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none"
               placeholder="Paste CDR / call log / ledger text…"
               value={cdrText}
               onChange={(e) => setCdrText(e.target.value)}
@@ -119,29 +128,42 @@ export default function Ingestion({ onIngested }) {
           </div>
         </div>
 
-        <label className="checkbox-row">
+        <label className="flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
             checked={appendMode}
             onChange={(e) => setAppendMode(e.target.checked)}
+            className="h-4 w-4 text-accent bg-bg border border-border rounded focus:ring-accent"
           />
           Append new report to this case's existing graph (live-update)
         </label>
 
-        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-          <button className="primary" onClick={runIngestion} disabled={status?.kind === 'busy'}>
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+          <button
+            onClick={runIngestion}
+            disabled={status?.kind === 'busy'}
+            className="flex-1 px-4 py-2 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
+          >
             Run extraction
           </button>
-          <button className="danger" onClick={clearCase} disabled={status?.kind === 'busy'}>
+          <button
+            onClick={clearCase}
+            disabled={status?.kind === 'busy'}
+            className="flex-1 px-4 py-2 border border-danger text-danger rounded-lg hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg text-sm"
+          >
             Clear this case
           </button>
         </div>
 
         {status && (
-          <div style={{ marginTop: 16 }}>
-            {status.kind === 'error' && <div className="alert-row">{status.message}</div>}
-            {status.kind !== 'error' && <div className="info-row">{status.message}</div>}
-          </div>
+          <motion.div
+            className={`mt-4 px-4 py-2 rounded-lg text-sm ${status.kind === 'error' ? 'bg-danger/10 text-danger border border-danger/30' : 'bg-teal/10 text-teal border border-teal/30'}`}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {status.message}
+          </motion.div>
         )}
       </Panel>
     </>

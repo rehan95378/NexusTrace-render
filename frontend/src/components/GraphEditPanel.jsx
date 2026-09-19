@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
+import { motion } from 'framer-motion'
 
 const NODE_TYPES = [
   { key: 'people', type: 'Person', label: 'Person' },
@@ -206,18 +207,34 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
   }
 
   return (
-    <div className="edit-modal-overlay" onClick={onClose}>
-      <div className="edit-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="edit-modal__header">
-          <h2>Edit graph</h2>
-          <button className="node-panel__close" onClick={onClose}>×</button>
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="w-full max-w-xl max-h-[85vh] flex flex-col bg-panel border border-border rounded-lg shadow-xl overflow-hidden"
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="font-display text-lg font-semibold text-text">Edit graph</h2>
+          <button className="text-muted hover:text-text transition-colors duration-200" onClick={onClose}>×</button>
         </div>
 
-        <div className="edit-modal__tabs">
+        <div className="flex flex-wrap gap-2 px-5 pt-2 border-b border-border">
           {TABS.map((t) => (
             <button
               key={t.key}
-              className={`edit-modal__tab ${tab === t.key ? 'active' : ''}`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors duration-200
+                ${tab === t.key
+                  ? 'bg-panel-raised border-accent text-accent'
+                  : 'bg-panel border-border text-muted hover:text-text hover:border-border/50'}`}
               onClick={() => { setTab(t.key); setStatus(null) }}
             >
               {t.label}
@@ -226,10 +243,16 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
         </div>
 
         {status && (
-          <div className={status.kind === 'error' ? 'alert-row' : 'info-row'}>{status.message}</div>
+          <div className={`mx-5 mt-3 px-4 py-2 rounded-lg text-sm font-mono ${
+            status.kind === 'error'
+              ? 'bg-danger/10 text-danger border border-danger/30'
+              : 'bg-teal/10 text-teal border border-teal/30'
+          }`}>
+            {status.message}
+          </div>
         )}
 
-        <div className="edit-modal__body">
+        <div className="flex-1 overflow-y-auto px-5 py-4">
           {tab === 'create-node' && <CreateNodeForm caseId={caseId} allCasesMode={allCasesMode} onDone={notifyChanged} guard={guard} />}
           {tab === 'create-rel' && (
             <CreateRelForm caseId={caseId} allCasesMode={allCasesMode} nodeOptions={nodeOptions} suggestions={suggestions} onDone={notifyChanged} guard={guard} />
@@ -253,14 +276,18 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
             <DeleteRelForm caseId={caseId} allCasesMode={allCasesMode} edgeOptions={edgeOptions} onDone={notifyChanged} guard={guard} />
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
 function NodeSelect({ options, value, onChange }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+    >
       <option value="">Select a node…</option>
       {options.map((o) => (
         <option key={`${o.caseId}::${o.type}::${o.id}`} value={`${o.caseId}::${o.type}::${o.id}`}>{o.label}</option>
@@ -277,16 +304,15 @@ function CreateNodeForm({ caseId, allCasesMode, onDone, guard }) {
 
   if (allCasesMode) {
     return (
-      <div className="edit-form" style={{ padding: '20px', textAlign: 'center', color: '#8fa0a3' }}>
-        Node creation is only available in single-case mode.
-        <br />
-        Switch to "This case" to create new entities.
+      <div className="flex flex-col items-center justify-center py-12 text-center text-muted">
+        <p>Node creation is only available in single-case mode.</p>
+        <p className="mt-1">Switch to "This case" to create new entities.</p>
       </div>
     )
   }
 
   return (
-    <form className="edit-form" onSubmit={(e) => {
+    <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault()
       guard(async () => {
         await api.addEntity(caseId, type, value.trim())
@@ -295,13 +321,33 @@ function CreateNodeForm({ caseId, allCasesMode, onDone, guard }) {
         onDone(`Created ${type}: ${created}.`)
       })
     }}>
-      <label>Node type</label>
-      <select value={type} onChange={(e) => setType(e.target.value)}>
-        {NODE_TYPES.map((nt) => <option key={nt.type} value={nt.type}>{nt.label}</option>)}
-      </select>
-      <label>Value</label>
-      <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g. Ramesh Yadav" required />
-      <button className="primary" type="submit" disabled={!value.trim()}>Create node</button>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Node type</label>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        >
+          {NODE_TYPES.map((nt) => <option key={nt.type} value={nt.type}>{nt.label}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Value</label>
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="e.g. Ramesh Yadav"
+          required
+          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!value.trim()}
+        className="w-full px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+      >
+        Create node
+      </button>
     </form>
   )
 }
@@ -312,8 +358,9 @@ function CreateRelForm({ caseId, allCasesMode, nodeOptions, suggestions, onDone,
   const [source, setSource] = useState('')
   const [target, setTarget] = useState('')
   const [relType, setRelType] = useState('')
+
   return (
-    <form className="edit-form" onSubmit={(e) => {
+    <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault()
       const sourceParts = source.split('::')
       const targetParts = target.split('::')
@@ -338,27 +385,38 @@ function CreateRelForm({ caseId, allCasesMode, nodeOptions, suggestions, onDone,
         onDone(`Created relationship "${relType}" from ${sId} to ${tId}${crossCaseNote}.`)
       })
     }}>
-      <label>From node</label>
-      <NodeSelect options={nodeOptions} value={source} onChange={setSource} />
-      <label>To node</label>
-      <NodeSelect options={nodeOptions} value={target} onChange={setTarget} />
-      <label>Relationship name</label>
-      <input
-        value={relType}
-        onChange={(e) => setRelType(e.target.value)}
-        placeholder="e.g. Business Partner, Connected To"
-        list="rel-type-suggestions"
-        required
-      />
-      <datalist id="rel-type-suggestions">
-        {suggestions.map((s) => <option key={s} value={s} />)}
-      </datalist>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">From node</label>
+        <NodeSelect options={nodeOptions} value={source} onChange={setSource} />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">To node</label>
+        <NodeSelect options={nodeOptions} value={target} onChange={setTarget} />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Relationship name</label>
+        <input
+          value={relType}
+          onChange={(e) => setRelType(e.target.value)}
+          placeholder="e.g. Business Partner, Connected To"
+          list="rel-type-suggestions"
+          required
+          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        />
+        <datalist id="rel-type-suggestions">
+          {suggestions.map((s) => <option key={s} value={s} />)}
+        </datalist>
+      </div>
       {allCasesMode && source && target && source.split('::')[0] !== target.split('::')[0] && (
-        <div className="info-row" style={{ fontSize: '0.9em', marginTop: 8 }}>
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 text-amber-300 border border-amber-500/30 rounded-lg text-sm font-mono">
           ⚠️ Creating cross-case relationship between different cases
         </div>
       )}
-      <button className="primary" type="submit" disabled={!source || !target || !relType.trim()}>
+      <button
+        type="submit"
+        disabled={!source || !target || !relType.trim()}
+        className="w-full px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+      >
         Create relationship
       </button>
     </form>
@@ -369,8 +427,9 @@ function CreateRelForm({ caseId, allCasesMode, nodeOptions, suggestions, onDone,
 function RenameNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
   const [node, setNode] = useState('')
   const [newValue, setNewValue] = useState('')
+
   return (
-    <form className="edit-form" onSubmit={(e) => {
+    <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault()
       // Parse format: caseId::Type::id
       const parts = node.split('::')
@@ -385,11 +444,26 @@ function RenameNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
         onDone(`Renamed ${id} to ${to}.`)
       })
     }}>
-      <label>Node</label>
-      <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
-      <label>New name</label>
-      <input value={newValue} onChange={(e) => setNewValue(e.target.value)} required />
-      <button className="primary" type="submit" disabled={!node || !newValue.trim()}>Rename</button>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Node</label>
+        <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">New name</label>
+        <input
+          value={newValue}
+          onChange={(e) => setNewValue(e.target.value)}
+          required
+          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!node || !newValue.trim()}
+        className="w-full px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+      >
+        Rename
+      </button>
     </form>
   )
 }
@@ -399,8 +473,9 @@ function RenameRelForm({ caseId, edgeOptions, onDone, guard }) {
   const [edgeKey, setEdgeKey] = useState('')
   const [newName, setNewName] = useState('')
   const edge = edgeOptions[Number(edgeKey)]
+
   return (
-    <form className="edit-form" onSubmit={(e) => {
+    <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault()
       if (!edge) return
 
@@ -424,14 +499,33 @@ function RenameRelForm({ caseId, edgeOptions, onDone, guard }) {
         onDone(`Renamed relationship to "${to}".`)
       })
     }}>
-      <label>Relationship</label>
-      <select value={edgeKey} onChange={(e) => setEdgeKey(e.target.value)}>
-        <option value="">Select a relationship…</option>
-        {edgeOptions.map((e, i) => <option key={i} value={i}>{e.display}</option>)}
-      </select>
-      <label>New name</label>
-      <input value={newName} onChange={(e) => setNewName(e.target.value)} required />
-      <button className="primary" type="submit" disabled={!edge || !newName.trim()}>Rename relationship</button>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Relationship</label>
+        <select
+          value={edgeKey}
+          onChange={(e) => setEdgeKey(e.target.value)}
+          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        >
+          <option value="">Select a relationship…</option>
+          {edgeOptions.map((e, i) => <option key={i} value={i}>{e.display}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">New name</label>
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          required
+          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!edge || !newName.trim()}
+        className="w-full px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+      >
+        Rename relationship
+      </button>
     </form>
   )
 }
@@ -446,7 +540,7 @@ function MergeNodesForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
   const keepType = keepParts[1] // Type is at position 1
 
   return (
-    <form className="edit-form" onSubmit={(e) => {
+    <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault()
       // Parse format: caseId::Type::id
       const keepCaseId = keepParts[0]
@@ -471,15 +565,25 @@ function MergeNodesForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
         onDone(`Merged ${mergeId} into ${keepId}.`)
       })
     }}>
-      <label>Keep this node</label>
-      <NodeSelect options={nodeOptions} value={keep} onChange={setKeep} />
-      <label>Merge this node into it (same type — it's deleted after merging)</label>
-      <NodeSelect
-        options={nodeOptions.filter((o) => !keepType || o.type === keepType)}
-        value={merge}
-        onChange={setMerge}
-      />
-      <button className="primary" type="submit" disabled={!keep || !merge || keep === merge}>Merge</button>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Keep this node</label>
+        <NodeSelect options={nodeOptions} value={keep} onChange={setKeep} />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Merge this node into it (same type — it's deleted after merging)</label>
+        <NodeSelect
+          options={nodeOptions.filter((o) => !keepType || o.type === keepType)}
+          value={merge}
+          onChange={setMerge}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!keep || !merge || keep === merge}
+        className="w-full px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+      >
+        Merge
+      </button>
     </form>
   )
 }
@@ -487,8 +591,9 @@ function MergeNodesForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
 // 3. Delete a node
 function DeleteNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
   const [node, setNode] = useState('')
+
   return (
-    <form className="edit-form" onSubmit={(e) => {
+    <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault()
       // Parse format: caseId::Type::id
       const parts = node.split('::')
@@ -503,9 +608,17 @@ function DeleteNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
         onDone(`Deleted ${id}.`)
       })
     }}>
-      <label>Node</label>
-      <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
-      <button className="danger" type="submit" disabled={!node}>Delete node</button>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Node</label>
+        <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
+      </div>
+      <button
+        type="submit"
+        disabled={!node}
+        className="w-full px-4 py-2 border border-danger text-danger rounded-lg hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg"
+      >
+        Delete node
+      </button>
     </form>
   )
 }
@@ -516,7 +629,7 @@ function DeleteRelForm({ caseId, edgeOptions, onDone, guard }) {
   const edge = edgeOptions[Number(edgeKey)]
 
   return (
-    <form className="edit-form" onSubmit={(e) => {
+    <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault()
       if (!edge) return
 
@@ -540,12 +653,24 @@ function DeleteRelForm({ caseId, edgeOptions, onDone, guard }) {
         onDone('Relationship deleted.')
       })
     }}>
-      <label>Relationship</label>
-      <select value={edgeKey} onChange={(e) => setEdgeKey(e.target.value)}>
-        <option value="">Select a relationship…</option>
-        {edgeOptions.map((e, i) => <option key={i} value={i}>{e.display}</option>)}
-      </select>
-      <button className="danger" type="submit" disabled={!edge}>Delete relationship</button>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Relationship</label>
+        <select
+          value={edgeKey}
+          onChange={(e) => setEdgeKey(e.target.value)}
+          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        >
+          <option value="">Select a relationship…</option>
+          {edgeOptions.map((e, i) => <option key={i} value={i}>{e.display}</option>)}
+        </select>
+      </div>
+      <button
+        type="submit"
+        disabled={!edge}
+        className="w-full px-4 py-2 border border-danger text-danger rounded-lg hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg"
+      >
+        Delete relationship
+      </button>
     </form>
   )
 }
@@ -560,7 +685,7 @@ function ChangeTypeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
   const currentType = nodeParts[1]
 
   return (
-    <form className="edit-form" onSubmit={(e) => {
+    <form className="space-y-4" onSubmit={(e) => {
       e.preventDefault()
       const nodeCaseId = nodeParts[0]
       const nodeId = nodeParts.slice(2).join('::')
@@ -574,23 +699,36 @@ function ChangeTypeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
         onDone(`Changed type from ${currentType} to ${newType}.`)
       })
     }}>
-      <label>Node</label>
-      <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
-      <label>New type</label>
-      <select value={newType} onChange={(e) => setNewType(e.target.value)} disabled={!node}>
-        <option value="">Select new type…</option>
-        {NODE_TYPES.map((nt) => (
-          currentType && nt.type !== currentType ? (
-            <option key={nt.type} value={nt.type}>{nt.label}</option>
-          ) : null
-        ))}
-      </select>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">Node</label>
+        <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-muted mb-1">New type</label>
+        <select
+          value={newType}
+          onChange={(e) => setNewType(e.target.value)}
+          disabled={!node}
+          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg disabled:opacity-50"
+        >
+          <option value="">Select new type…</option>
+          {NODE_TYPES.map((nt) => (
+            currentType && nt.type !== currentType ? (
+              <option key={nt.type} value={nt.type}>{nt.label}</option>
+            ) : null
+          ))}
+        </select>
+      </div>
       {currentType && newType && (
-        <div className="info-row" style={{ fontSize: '0.9em', marginTop: 8 }}>
+        <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 text-blue-300 border border-blue-500/30 rounded-lg text-sm font-mono">
           ℹ️ Node will be converted from {currentType} to {newType}
         </div>
       )}
-      <button className="primary" type="submit" disabled={!node || !newType || currentType === newType}>
+      <button
+        type="submit"
+        disabled={!node || !newType || currentType === newType}
+        className="w-full px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+      >
         Change type
       </button>
     </form>

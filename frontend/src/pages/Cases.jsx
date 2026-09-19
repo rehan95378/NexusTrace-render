@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import Panel from '../components/Panel'
 import { api } from '../api'
 
 /**
@@ -43,69 +45,110 @@ export default function Cases({ onNavigateToIngestion }) {
   }
 
   return (
-    <div className="page-content">
-      <div className="case-selector__panel">
-        <h2 className="case-selector__title">Case Management</h2>
-        <p className="case-selector__hint">Create new cases or manage existing ones.</p>
+    <div className="space-y-6">
+      <Panel
+        title="Case Management"
+        hint="Create new cases or manage existing ones."
+      >
+        {error && (
+          <motion.div
+            className="mb-4 p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {error}
+          </motion.div>
+        )}
 
-        {error && <div className="alert-row">{error}</div>}
-
-        <form className="case-selector__new" onSubmit={handleCreate}>
+        <form
+          className="flex flex-col sm:flex-row gap-3 mb-6"
+          onSubmit={handleCreate}
+        >
           <input
             type="text"
             placeholder="New case name, e.g. Case 01 — Nagpur Extortion Ring"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
+            className="flex-1 w-full sm:flex-1 bg-bg border border-border rounded-lg px-4 py-2.5 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-200"
+            required
           />
-          <button className="primary" type="submit" disabled={creating || !newName.trim()}>
-            {creating ? 'Creating…' : 'New case'}
+          <button
+            type="submit"
+            disabled={creating || !newName.trim()}
+            className="px-5 py-2.5 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          >
+            {creating ? 'Creating…' : 'New Case'}
           </button>
         </form>
 
-        {!cases && !error && <p className="empty-state">Loading cases…</p>}
+        {!cases && !error && (
+          <p className="text-muted text-center py-8">Loading cases…</p>
+        )}
         {cases && cases.length === 0 && (
-          <p className="empty-state">No cases yet — create one above to get started.</p>
+          <motion.p
+            className="text-muted text-center py-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            No cases yet — create one above to get started.
+          </motion.p>
         )}
 
         {cases && cases.length > 0 && (
-          <div className="case-list">
-            <table className="entity-table">
+          <motion.div
+            className="overflow-x-auto"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th>Case Name</th>
-                  <th>Entities</th>
-                  <th>Created</th>
-                  <th>Actions</th>
+                <tr className="text-left text-muted font-normal border-b border-border">
+                  <th className="pb-3 font-medium text-text">Case Name</th>
+                  <th className="pb-3 font-medium text-text">Entities</th>
+                  <th className="pb-3 font-medium text-text">Created</th>
+                  <th className="pb-3 font-medium text-text">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {cases.map((c) => (
-                  <tr key={c.id}>
-                    <td><strong>{c.name}</strong></td>
-                    <td>{c.entity_count} {c.entity_count === 1 ? 'entity' : 'entities'}</td>
-                    <td>{new Date(c.created_at).toLocaleDateString()}</td>
-                    <td>
-                      <button
-                        className="primary"
-                        style={{ marginRight: '8px' }}
-                        onClick={onNavigateToIngestion}
-                      >
-                        Open in Ingestion
-                      </button>
-                      <button
-                        className="danger"
-                        onClick={() => handleDelete(c.id, c.name)}
-                      >
-                        Delete
-                      </button>
+                {cases.map((c, index) => (
+                  <motion.tr
+                    key={c.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="border-b border-border/50 hover:bg-panel-raised/50 transition-colors"
+                  >
+                    <td className="py-4 font-medium text-text">{c.name}</td>
+                    <td className="py-4 text-muted">
+                      {c.entity_count} {c.entity_count === 1 ? 'entity' : 'entities'}
                     </td>
-                  </tr>
+                    <td className="py-4 text-muted font-mono">
+                      {new Date(c.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="py-4">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          className="flex-1 px-3 py-1.5 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+                          onClick={onNavigateToIngestion}
+                        >
+                          Open in Ingestion
+                        </button>
+                        <button
+                          className="flex-1 px-3 py-1.5 border border-danger text-danger rounded-lg hover:bg-danger/10 transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg"
+                          onClick={() => handleDelete(c.id, c.name)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </Panel>
     </div>
   )
 }

@@ -207,28 +207,9 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
 
   if (fullscreen) {
     return (
-      <div className="fullscreen" style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 1000,
-        background: '#0a0f12',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
+      <div className="fixed inset-0 z-50 flex flex-col bg-gray-900">
         {/* Compact toolbar at top */}
-        <div style={{
-          display: 'flex',
-          gap: 8,
-          padding: '8px 12px',
-          background: '#161e24',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '0.85em',
-          flexShrink: 0
-        }}>
+        <div className="flex items-center justify-between gap-2 px-4 py-2 bg-gray-800 text-sm font-mono">
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Single dropdown for case selection */}
             <select
@@ -309,7 +290,7 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
 
   return (
     <Panel title="Evidence Graph Map" hint={isAllCases ? "Combined graph across cases. Dashed edges = cross-case links." : "Force-directed map of entities in the selected case."}>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap items-center gap-4 mb-4">
         <select
           value={isAllCases ? '__all__' : selectedCaseId}
           onChange={(e) => {
@@ -321,7 +302,7 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
               setSelectedCaseId(e.target.value)
             }
           }}
-          style={{ padding: '6px 12px', minWidth: 250 }}
+          className="px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg min-w-[250px]"
         >
           <option value="">Select a case…</option>
           <option value="__all__">All cases</option>
@@ -333,15 +314,15 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
         </select>
 
         {isAllCases && cases.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.9em', color: '#8fa0a3' }}>Show:</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted">Show:</span>
             {cases.map((c) => (
-              <label key={c.id} style={{ fontSize: '0.9em', cursor: 'pointer' }}>
+              <label key={c.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
                 <input
                   type="checkbox"
                   checked={visibleCaseIds.has(c.id)}
                   onChange={() => toggleCaseVisibility(c.id)}
-                  style={{ marginRight: 4 }}
+                  className="h-4 w-4 text-accent bg-bg border border-border rounded focus:ring-accent"
                 />
                 {c.name}
               </label>
@@ -350,27 +331,26 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
         )}
       </div>
 
-      <div className="graph-toolbar">
+      <div className="flex items-center gap-2 mb-4">
         <button
-          className="primary"
+          className="px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
           onClick={() => setEditOpen(true)}
         >
           Edit graph
         </button>
         <button
-          className="primary"
+          className="px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
           onClick={() => setFullscreen(true)}
-          style={{ marginLeft: 8 }}
         >
           Fullscreen
         </button>
-        {isAllCases && <span style={{ fontSize: '0.85em', color: '#8fa0a3', marginLeft: 8 }}>Editing in all-cases mode allows cross-case linking</span>}
+        {isAllCases && <span className="text-sm text-muted ml-2">Editing in all-cases mode allows cross-case linking</span>}
       </div>
 
-      {error && <div className="alert-row">{error}</div>}
-      {empty && !error && <p className="empty-state">Canvas empty. Run ingestion in the Ingestion tab first.</p>}
-      <div className={`graph-canvas-wrap${empty || error ? ' graph-canvas-wrap--hidden' : ''}`}>
-        <div id="graph-canvas" ref={containerRef} />
+      {error && <div className="bg-danger/10 text-danger border border-danger/30 rounded-lg p-3 mb-4 text-sm font-mono">{error}</div>}
+      {empty && !error && <p className="text-center py-8 text-muted font-mono">Canvas empty. Run ingestion in the Ingestion tab first.</p>}
+      <div className="relative">
+        <div id="graph-canvas" ref={containerRef} className="w-full h-[640px] bg-bg rounded-lg" />
         {selected && (
           <NodeDetailsPanel
             caseId={selected.caseId}

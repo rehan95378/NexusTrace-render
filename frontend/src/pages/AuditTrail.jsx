@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
@@ -10,52 +11,106 @@ export default function AuditTrail({ refreshKey }) {
     api.auditAll().then(setData).catch((e) => setError(e.message))
   }, [refreshKey])
 
-  return (
+  const renderError = () => (
     <Panel title="Tamper-Evident Audit Log">
-      {error && <div className="alert-row">{error}</div>}
-      {!error && !data && <p className="empty-state">Loading…</p>}
+      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error}</div>
+    </Panel>
+  )
+
+  const renderLoading = () => (
+    <Panel title="Tamper-Evident Audit Log">
+      <motion.p
+        className="text-muted text-center py-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        Loading…
+      </motion.p>
+    </Panel>
+  )
+
+  return (
+    <>
+      {error && renderError()}
+      {!error && !data && renderLoading()}
       {data && (
-        <>
+        <Panel title="Tamper-Evident Audit Log">
           {/* Per-case verification status */}
           {data.verification && Object.keys(data.verification).length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <strong>Hash Chain Verification (per case):</strong>
-              {Object.entries(data.verification).map(([caseId, status]) => (
-                <div key={caseId} style={{ marginTop: 4 }}>
-                  {status.valid ? (
-                    <div className="info-row" style={{ fontSize: '0.9em' }}>
-                      ✓ Case {caseId}: Chain intact
-                    </div>
-                  ) : (
-                    <div className="alert-row" style={{ fontSize: '0.9em' }}>
-                      ✗ Case {caseId}: Chain BROKEN at entry {status.broken_entry?.seq}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <motion.div
+              key="verification"
+              className="mb-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="text-sm font-medium text-muted mb-2">Hash Chain Verification (per case):</div>
+              <div className="space-y-2 text-xs font-mono">
+                {Object.entries(data.verification).map(([caseId, status]) => (
+                  <motion.div
+                    key={caseId}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: Math.random() * 0.1 }}
+                    className="flex items-center justify-between p-2 rounded-lg "
+                  >
+                    <span>
+                      {status.valid ? '✓' : '✗'} Case {caseId}:
+                      {status.valid ? 'Chain intact' : `Chain BROKEN at entry ${status.broken_entry?.seq}`}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      status.valid ? 'bg-teal/20 text-teal' : 'bg-danger/20 text-danger'
+                    }`}>
+                      {status.valid ? 'OK' : 'BROKEN'}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
           )}
 
           {data.entries.length === 0 && (
-            <p className="empty-state" style={{ marginTop: 12 }}>No actions logged yet. Run ingestion first.</p>
+            <motion.p
+              key="empty"
+              className="text-muted text-center py-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              No actions logged yet. Run ingestion first.
+            </motion.p>
           )}
 
-          <div style={{ marginTop: 12 }}>
+          <div key="entries" className="mt-4 space-y-2">
             {data.entries.map((entry, idx) => (
-              <details className="audit-entry" key={`${entry.case_id}-${entry.seq}-${idx}`}>
-                <summary>
-                  <span style={{ fontSize: '0.85em', color: '#8fa0a3', marginRight: 8 }}>
+              <motion.details
+                key={`${entry.case_id}-${entry.seq}-${idx}`}
+                className="audit-entry bg-panel-raised/50 border border-border/50 rounded-lg overflow-hidden"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.03 }}
+              >
+                <motion.summary
+                  className="flex items-center gap-2 p-3 cursor-pointer select-none"
+                >
+                  <span className="flex-shrink-0 text-xs font-mono text-muted">
                     [{entry.case_id}]
                   </span>
-                  {entry.timestamp}
-                  <span className="action">{entry.action}</span>
-                </summary>
-                <pre>{JSON.stringify(entry, null, 2)}</pre>
-              </details>
+                  <span className="flex-shrink-0 text-xs font-mono text-muted">
+                    {entry.timestamp}
+                  </span>
+                  <span className="flex-1 text-sm font-medium text-text action">
+                    {entry.action}
+                  </span>
+                </motion.summary>
+                <motion.div
+                  className="p-3 bg-bg text-xs font-mono text-text overflow-auto max-h-[200px]"
+                >
+                  <pre>{JSON.stringify(entry, null, 2)}</pre>
+                </motion.div>
+              </motion.details>
             ))}
           </div>
-        </>
+        </Panel>
       )}
-    </Panel>
+    </>
   )
 }
