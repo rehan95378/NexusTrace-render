@@ -83,21 +83,33 @@ def get_entities_for_case(case_id):
 
 
 def get_all_entities():
-    """Every case's entities, grouped by case, for the 'All cases' toggle on
-    the Entities tab. BUILD.md step 1 — no cross-case link detection here,
-    just each case's own entities laid side by side."""
+    """Every case's entities, returning a flat list across all cases for the
+    'All cases' toggle on the Entities tab. Features cross-case link detection."""
     cases = db.query(
         "MATCH (c:Case) RETURN c.id AS id, c.name AS name, c.created_at AS created_at "
         "ORDER BY c.created_at DESC"
     )
-    grouped = []
-    totals = {"people": 0, "locations": 0, "vehicles": 0, "phones": 0, "organizations": 0}
+    entities = []
+
+    type_map = {
+        "people": "person",
+        "locations": "location",
+        "vehicles": "vehicle",
+        "phones": "phone",
+        "organizations": "organization",
+    }
+
     for c in cases:
         entry = get_entities_for_case(c["id"])
-        for key in totals:
-            totals[key] += len(entry[key])
-        grouped.append({"case_id": c["id"], "case_name": c["name"], **entry})
-    return {"cases": grouped, "totals": totals}
+        for group_key, type_val in type_map.items():
+            for val in entry.get(group_key, []):
+                entities.append({
+                    "type": type_val,
+                    "value": val,
+                    "case_id": c["id"],
+                    "case_name": c["name"]
+                })
+    return entities
 
 
 def get_entity_detail(case_id, label, node_id):
@@ -294,10 +306,11 @@ def add_relationship(source_case_id, source_type, source_id, target_case_id, tar
     return {"type": rel_type, "cross_case": is_cross_case}
 
 
-def rename_relationship(case_id, source_type, source_id, target_type, target_id,
-                         old_rel_type, new_rel_type):
+def rename_relationship(source_case_id, source_type, source_id, target_case_id, target_type, target_id,
+                        old_rel_type, new_rel_type):
     """Neo4j relationship types are immutable, so a "rename" is implemented
-    as delete-old + create-new, carrying the confidence value forward."""
+    as delete-old + create-new, carrying the confidence value forward.
+    Supports cross-case relationships when source_case_id != target_case_id."""
     _check_label(source_type)
     _check_label(target_type)
     old_rel_type = sanitize_rel_type(old_rel_type)
@@ -306,40 +319,61 @@ def rename_relationship(case_id, source_type, source_id, target_type, target_id,
         return {"type": new_rel_type}
 
     rows = db.query(
-        f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}})"
-        f"-[r:{old_rel_type}]->(b:{target_type} {{id: $t, case_id: $case_id}}) "
+        f"MATCH (a:{source_type} {{id: $s, case_id: $source_case_id}})"
+        f"-[r:{old_rel_type}]->(b:{target_type} {{id: $t, case_id: $target_case_id}}) "
         "RETURN coalesce(r.confidence, 1) AS confidence",
-        {"s": source_id, "t": target_id, "case_id": case_id},
+        {"s": source_id, "t": target_id, "source_case_id": source_case_id, "target_case_id": target_case_id},
     )
     if not rows:
         raise LookupError("Relationship not found.")
     confidence = rows[0]["confidence"]
 
     db.query(
-        f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}})"
-        f"-[r:{old_rel_type}]->(b:{target_type} {{id: $t, case_id: $case_id}}) DELETE r",
-        {"s": source_id, "t": target_id, "case_id": case_id},
+        f"MATCH (a:{source_type} {{id: $s, case_id: $source_case_id}})"
+        f"-[r:{old_rel_type}]->(b:{target_type} {{id: $t, case_id: $target_case_id}}) DELETE r",
+        {"s": source_id, "t": target_id, "source_case_id": source_case_id, "target_case_id": target_case_id},
     )
     db.query(
-        f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}}), "
-        f"(b:{target_type} {{id: $t, case_id: $case_id}}) "
+        f"MATCH (a:{source_type} {{id: $s, case_id: $source_case_id}}), "
+        f"(b:{target_type} {{id: $t, case_id: $target_case_id}}) "
         f"MERGE (a)-[r:{new_rel_type}]->(b) SET r.confidence = $confidence",
-        {"s": source_id, "t": target_id, "case_id": case_id, "confidence": confidence},
+        {"s": source_id, "t": target_id, "source_case_id": source_case_id, "target_case_id": target_case_id, "confidence": confidence},
     )
-    audit.log(case_id, "RENAME_RELATIONSHIP", {
+
+    is_cross_case = source_case_id != target_case_id
+    audit.log(source_case_id, "RENAME_RELATIONSHIP", {
         "from_type": old_rel_type, "to_type": new_rel_type,
         "source": source_id, "target": target_id,
+        "cross_case": is_cross_case,
     })
     return {"type": new_rel_type}
 
 
-def delete_relationship(case_id, source_type, source_id, target_type, target_id, rel_type):
+def delete_relationship(source_case_id, source_type, source_id, target_case_id, target_type, target_id, rel_type):
+    """Delete a relationship. Supports cross-case relationships when
+    source_case_id != target_case_id."""
     _check_label(source_type)
     _check_label(target_type)
     rel_type = sanitize_rel_type(rel_type)
-    db.query(
-        f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}})"
-        f"-[r:{rel_type}]->(b:{target_type} {{id: $t, case_id: $case_id}}) DELETE r",
-        {"s": source_id, "t": target_id, "case_id": case_id},
+
+    rows = db.query(
+        f"MATCH (a:{source_type} {{id: $s, case_id: $source_case_id}})"
+        f"-[r:{rel_type}]->(b:{target_type} {{id: $t, case_id: $target_case_id}}) "
+        "RETURN r",
+        {"s": source_id, "t": target_id, "source_case_id": source_case_id, "target_case_id": target_case_id},
     )
-    audit.log(case_id, "DELETE_RELATIONSHIP", {"type": rel_type, "from": source_id, "to": target_id})
+
+    if not rows:
+        raise LookupError("Relationship not found.")
+
+    db.query(
+        f"MATCH (a:{source_type} {{id: $s, case_id: $source_case_id}})"
+        f"-[r:{rel_type}]->(b:{target_type} {{id: $t, case_id: $target_case_id}}) DELETE r",
+        {"s": source_id, "t": target_id, "source_case_id": source_case_id, "target_case_id": target_case_id},
+    )
+
+    is_cross_case = source_case_id != target_case_id
+    audit.log(source_case_id, "DELETE_RELATIONSHIP", {
+        "type": rel_type, "from": source_id, "to": target_id,
+        "cross_case": is_cross_case,
+    })

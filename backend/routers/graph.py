@@ -106,7 +106,7 @@ def get_all_graph():
     nodes, edges, seen = [], [], set()
 
     node_rows = db.query(
-        f"MATCH (n) WHERE ({label_filter_n}) "
+        f"MATCH (n) WHERE ({label_filter_n}) AND n.case_id IS NOT NULL "
         "RETURN n.id AS id, labels(n) AS labels, n.case_id AS case_id"
     )
     for record in node_rows:
@@ -125,28 +125,29 @@ def get_all_graph():
             })
             seen.add(key)
 
-    # Within-case edges
+    # Within-case and manual cross-case edges
     results = db.query(
         f"MATCH (n)-[r]->(m) WHERE ({label_filter_n}) AND ({label_filter_m}) "
-        "AND n.case_id = m.case_id "
-        "RETURN n.id AS n_id, labels(n) AS n_labels, n.case_id AS case_id, "
-        "m.id AS m_id, labels(m) AS m_labels, type(r) AS rel_type, "
+        "AND n.case_id IS NOT NULL AND m.case_id IS NOT NULL "
+        "RETURN n.id AS n_id, labels(n) AS n_labels, n.case_id AS n_case_id, "
+        "m.id AS m_id, labels(m) AS m_labels, m.case_id AS m_case_id, type(r) AS rel_type, "
         "coalesce(r.confidence, 1) AS confidence"
     )
     for record in results:
         n_label = record["n_labels"][0] if record["n_labels"] else "Unknown"
         m_label = record["m_labels"][0] if record["m_labels"] else "Unknown"
-        case_id = record["case_id"]
-        n_key = all_case_node_key(case_id, n_label, record["n_id"])
-        m_key = all_case_node_key(case_id, m_label, record["m_id"])
+        n_case = record["n_case_id"]
+        m_case = record["m_case_id"]
+        n_key = all_case_node_key(n_case, n_label, record["n_id"])
+        m_key = all_case_node_key(m_case, m_label, record["m_id"])
 
         edges.append({
             "source": n_key,
             "target": m_key,
             "label": record["rel_type"],
             "confidence": record["confidence"],
-            "case_id": case_id,
-            "link_type": "in_case",
+            "case_id": n_case,
+            "link_type": "cross_case" if n_case != m_case else "in_case",
         })
 
     # Cross-case links: exact-match Phone/Vehicle/Organization + fuzzy-match Person

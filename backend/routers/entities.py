@@ -107,6 +107,7 @@ class RenameRelationshipRequest(BaseModel):
     source_id: str
     target_type: str
     target_id: str
+    target_case_id: str = None  # Optional: for cross-case relationships
     old_rel_type: str
     new_rel_type: str
 
@@ -130,9 +131,10 @@ def add_relationship(case_id: str, payload: RelationshipRequest):
 @router.patch("/cases/{case_id}/relationships")
 def rename_relationship(case_id: str, payload: RenameRelationshipRequest):
     try:
+        target_case = payload.target_case_id if payload.target_case_id else case_id
         result = entity_service.rename_relationship(
             case_id, payload.source_type, payload.source_id,
-            payload.target_type, payload.target_id,
+            target_case, payload.target_type, payload.target_id,
             payload.old_rel_type, payload.new_rel_type,
         )
     except LookupError as e:
@@ -145,10 +147,13 @@ def rename_relationship(case_id: str, payload: RenameRelationshipRequest):
 @router.delete("/cases/{case_id}/relationships")
 def delete_relationship(case_id: str, payload: RelationshipRequest):
     try:
+        target_case = payload.target_case_id if payload.target_case_id else case_id
         entity_service.delete_relationship(
             case_id, payload.source_type, payload.source_id,
-            payload.target_type, payload.target_id, payload.rel_type,
+            target_case, payload.target_type, payload.target_id, payload.rel_type,
         )
+    except LookupError as e:
+        raise HTTPException(404, str(e))
     except ValueError as e:
         raise HTTPException(400, str(e))
     return {"ok": True}

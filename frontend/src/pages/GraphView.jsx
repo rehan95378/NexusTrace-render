@@ -74,6 +74,11 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
 
       if (nodes.length === 0) {
         setEmpty(true)
+        // Destroy the network to clear the canvas for empty cases
+        if (networkRef.current) {
+          networkRef.current.destroy()
+          networkRef.current = null
+        }
         return
       }
       setEmpty(false)
