@@ -40,6 +40,10 @@ class MergeEntityRequest(BaseModel):
     merge_with: str
 
 
+class ChangeEntityTypeRequest(BaseModel):
+    new_type: str
+
+
 @router.get("/cases/{case_id}/entities/{node_type}/{node_id}")
 def get_entity_detail(case_id: str, node_type: str, node_id: str):
     try:
@@ -89,6 +93,17 @@ def merge_entity(case_id: str, node_type: str, node_id: str, payload: MergeEntit
     except ValueError as e:
         raise HTTPException(400, str(e))
     return {"ok": True}
+
+
+@router.patch("/cases/{case_id}/entities/{node_type}/{node_id}/type")
+def change_entity_type(case_id: str, node_type: str, node_id: str, payload: ChangeEntityTypeRequest):
+    try:
+        result = entity_service.change_entity_type(case_id, node_type, node_id, payload.new_type)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, **result}
 
 
 # --- Manual relationship CRUD ---

@@ -377,3 +377,129 @@ def delete_relationship(source_case_id, source_type, source_id, target_case_id, 
         "type": rel_type, "from": source_id, "to": target_id,
         "cross_case": is_cross_case,
     })
+
+
+def change_entity_type(case_id, current_label, node_id, new_label):
+    """
+    Convert a node from one type to another while preserving all relationships.
+
+    Steps:
+    1. Validate both labels exist in PROP_MAP
+    2. Get the current node's identifying property value (the node.id IS this value)
+    3. Check if a node with the same id already exists in the new label
+    4. Create new node with new label, preserving all properties
+    5. Redirect all incoming/outgoing relationships to new node
+    6. Delete old node
+    7. Audit log
+    """
+    old_prop = _check_label(current_label)
+    new_prop = _check_label(new_label)
+
+    if current_label == new_label:
+        raise ValueError("Node is already of that type.")
+
+    # Get the current node with all its properties
+    node_rows = db.query(
+        f"MATCH (n:{current_label} {{id: $id, case_id: $case_id}}) RETURN n",
+        {"id": node_id, "case_id": case_id},
+    )
+    if not node_rows:
+        raise LookupError("Entity not found.")
+
+    node = node_rows[0]["n"]
+    # The node's id property IS the identifying value (name/plate/number)
+    # We need to copy all properties except the old identifying property
+    # The new node will have the same id value but with the new identifying property name
+
+    # Check if a node with the same id already exists in the new label
+    clash = db.query(
+        f"MATCH (n:{new_label} {{id: $id, case_id: $case_id}}) RETURN n.id AS id",
+        {"id": node_id, "case_id": case_id},
+    )
+    if clash:
+        raise ValueError(f"A {new_label} with this identifier already exists.")
+
+    # Get all properties from the old node
+    # In Neo4j, we can get all properties using properties(n)
+    props_rows = db.query(
+        f"MATCH (n:{current_label} {{id: $id, case_id: $case_id}}) RETURN properties(n) AS props",
+        {"id": node_id, "case_id": case_id},
+    )
+    if not props_rows:
+        raise LookupError("Entity not found.")
+
+    props = dict(props_rows[0]["props"])
+    # Remove the old identifying property, we'll set the new one
+    props.pop(old_prop, None)
+    # Set the new identifying property to the same value as id
+    props[new_prop] = node_id
+    # Ensure id is set
+    props["id"] = node_id
+    props["case_id"] = case_id
+
+    # Build SET clause for creating the new node with all properties
+    set_clauses = []
+    params = {"id": node_id, "case_id": case_id}
+    for key, value in props.items():
+        if key not in ("id", "case_id"):  # These are handled separately
+            param_key = f"prop_{key}"
+            set_clauses.append(f"n.{key} = ${param_key}")
+            params[param_key] = value
+
+    set_clause = ", ".join(set_clauses) if set_clauses else ""
+
+    # Create the new node with the new label and all properties
+    if set_clause:
+        db.query(
+            f"CREATE (n:{new_label} {{id: $id, case_id: $case_id}}) SET {set_clause}",
+            params,
+        )
+    else:
+        db.query(
+            f"CREATE (n:{new_label} {{id: $id, case_id: $case_id}})",
+            params,
+        )
+
+    # Redirect all outgoing relationships
+    out_types = {r["rel_type"] for r in db.query(
+        f"MATCH (a:{current_label} {{id: $id, case_id: $case_id}})-[r]->() RETURN DISTINCT type(r) AS rel_type",
+        {"id": node_id, "case_id": case_id},
+    )}
+    for rel_type in out_types:
+        db.query(
+            f"MATCH (a:{current_label} {{id: $id, case_id: $case_id}})-[r:{rel_type}]->(m) "
+            f"MATCH (b:{new_label} {{id: $id, case_id: $case_id}}) "
+            f"WHERE m.id <> $id "
+            f"MERGE (b)-[r2:{rel_type}]->(m) "
+            "SET r2.confidence = coalesce(r2.confidence, 0) + coalesce(r.confidence, 1)",
+            {"id": node_id, "case_id": case_id},
+        )
+
+    # Redirect all incoming relationships
+    in_types = {r["rel_type"] for r in db.query(
+        f"MATCH (a:{current_label} {{id: $id, case_id: $case_id}})<-[r]-() RETURN DISTINCT type(r) AS rel_type",
+        {"id": node_id, "case_id": case_id},
+    )}
+    for rel_type in in_types:
+        db.query(
+            f"MATCH (a:{current_label} {{id: $id, case_id: $case_id}})<-[r:{rel_type}]-(m) "
+            f"MATCH (b:{new_label} {{id: $id, case_id: $case_id}}) "
+            f"WHERE m.id <> $id "
+            f"MERGE (b)<-[r2:{rel_type}]-(m) "
+            "SET r2.confidence = coalesce(r2.confidence, 0) + coalesce(r.confidence, 1)",
+            {"id": node_id, "case_id": case_id},
+        )
+
+    # Delete the old node (and its relationships, which have been redirected)
+    db.query(
+        f"MATCH (n:{current_label} {{id: $id, case_id: $case_id}}) DETACH DELETE n",
+        {"id": node_id, "case_id": case_id},
+    )
+
+    audit.log(case_id, "CHANGE_ENTITY_TYPE", {
+        "from_type": current_label,
+        "to_type": new_label,
+        "id": node_id,
+    })
+
+    return {"type": new_label, "id": node_id}

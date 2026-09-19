@@ -12,6 +12,7 @@ const NODE_TYPES = [
 const TABS = [
   { key: 'create-node', label: 'Create node' },
   { key: 'create-rel', label: 'Create relationship' },
+  { key: 'change-type', label: 'Change type' },
   { key: 'rename-node', label: 'Rename node' },
   { key: 'rename-rel', label: 'Rename relationship' },
   { key: 'merge', label: 'Merge nodes' },
@@ -116,11 +117,6 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
         return null
       }
 
-      // Filter out virtual cross-case links (they have match_kind and cannot be edited)
-      if (e.match_kind) {
-        return null
-      }
-
       let sType, sId, tType, tId, sCaseId, tCaseId
 
       try {
@@ -142,22 +138,48 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
             return null
           }
         } else {
-          // Single-case format: "Type:id"
-          const [sT, ...sRest] = e.source.split(':')
-          const [tT, ...tRest] = e.target.split(':')
-          sType = sT
-          sId = sRest.join(':')
-          tType = tT
-          tId = tRest.join(':')
-          sCaseId = caseId
-          tCaseId = caseId
+          // Single-case format:
+          // - Same case: "Type:id"
+          // - Cross-case source: "case_id:Type:id" (incoming from another case)
+          // - Cross-case target: "case_id:Type:id" (outgoing to another case)
+
+          // Check if source is cross-case (has format case_id:Type:id with 3+ parts)
+          const sParts = e.source.split(':')
+          if (sParts.length >= 3 && sParts[0] !== sParts[1]) {
+            // Cross-case source: case_id:Type:id
+            sCaseId = sParts[0]
+            sType = sParts[1]
+            sId = sParts.slice(2).join(':')
+          } else {
+            // Same-case source: Type:id
+            const [sT, ...sRest] = e.source.split(':')
+            sType = sT
+            sId = sRest.join(':')
+            sCaseId = caseId
+          }
+
+          // Check if target is cross-case (has format case_id:Type:id with 3+ parts)
+          const tParts = e.target.split(':')
+          if (tParts.length >= 3 && tParts[0] !== tParts[1]) {
+            // Cross-case target: case_id:Type:id
+            tCaseId = tParts[0]
+            tType = tParts[1]
+            tId = tParts.slice(2).join(':')
+          } else {
+            // Same-case target: Type:id
+            const [tT, ...tRest] = e.target.split(':')
+            tType = tT
+            tId = tRest.join(':')
+            tCaseId = caseId
+          }
         }
 
         return {
           sType, sId, sCaseId,
           tType, tId, tCaseId,
           relType: e.label,
-          display: `${sId} —[${e.label}]→ ${tId}${allCasesMode && sCaseId !== tCaseId ? ` [cross: ${sCaseId}→${tCaseId}]` : ''}`
+          isVirtual: !!e.match_kind,  // Mark virtual links so rename can filter them
+          display: `${sId} —[${e.label}]→ ${tId}${!allCasesMode && sCaseId !== tCaseId ? ` [cross→${tCaseId}]` : ''}${e.match_kind ? ' [virtual]' : ''}`
         }
       } catch (err) {
         console.error('Error parsing edge:', e, err)
@@ -211,6 +233,9 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
           {tab === 'create-node' && <CreateNodeForm caseId={caseId} allCasesMode={allCasesMode} onDone={notifyChanged} guard={guard} />}
           {tab === 'create-rel' && (
             <CreateRelForm caseId={caseId} allCasesMode={allCasesMode} nodeOptions={nodeOptions} suggestions={suggestions} onDone={notifyChanged} guard={guard} />
+          )}
+          {tab === 'change-type' && (
+            <ChangeTypeForm caseId={caseId} allCasesMode={allCasesMode} nodeOptions={nodeOptions} onDone={notifyChanged} guard={guard} />
           )}
           {tab === 'rename-node' && (
             <RenameNodeForm caseId={caseId} allCasesMode={allCasesMode} nodeOptions={nodeOptions} onDone={notifyChanged} guard={guard} />
@@ -378,6 +403,13 @@ function RenameRelForm({ caseId, edgeOptions, onDone, guard }) {
     <form className="edit-form" onSubmit={(e) => {
       e.preventDefault()
       if (!edge) return
+
+      // Prevent renaming virtual cross-case links
+      if (edge.isVirtual) {
+        alert('Cannot rename virtual cross-case links. These are automatically computed relationships.')
+        return
+      }
+
       guard(async () => {
         // Use source case from the edge itself
         await api.renameRelationship(edge.sCaseId, {
@@ -482,10 +514,19 @@ function DeleteNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
 function DeleteRelForm({ caseId, edgeOptions, onDone, guard }) {
   const [edgeKey, setEdgeKey] = useState('')
   const edge = edgeOptions[Number(edgeKey)]
+
   return (
     <form className="edit-form" onSubmit={(e) => {
       e.preventDefault()
       if (!edge) return
+
+      // Handle virtual links differently - they can't be "deleted" from database
+      if (edge.isVirtual) {
+        alert('This is a virtual cross-case link (algorithmically generated based on matching entities across cases). It will disappear once you correct the matching entities or they are no longer identical.')
+        return
+      }
+
+      // Regular relationship (manual or in-case) - can be deleted
       if (!window.confirm('Delete this relationship?')) return
       guard(async () => {
         // Use source case from the edge itself
@@ -505,6 +546,53 @@ function DeleteRelForm({ caseId, edgeOptions, onDone, guard }) {
         {edgeOptions.map((e, i) => <option key={i} value={i}>{e.display}</option>)}
       </select>
       <button className="danger" type="submit" disabled={!edge}>Delete relationship</button>
+    </form>
+  )
+}
+
+// 8. Change node type
+function ChangeTypeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
+  const [node, setNode] = useState('')
+  const [newType, setNewType] = useState('')
+
+  // Parse node format: caseId::Type::id
+  const nodeParts = node.split('::')
+  const currentType = nodeParts[1]
+
+  return (
+    <form className="edit-form" onSubmit={(e) => {
+      e.preventDefault()
+      const nodeCaseId = nodeParts[0]
+      const nodeId = nodeParts.slice(2).join('::')
+
+      if (!window.confirm(`Change ${currentType} to ${newType}? All relationships will be preserved.`)) return
+
+      guard(async () => {
+        await api.changeEntityType(nodeCaseId, currentType, nodeId, newType)
+        setNode('')
+        setNewType('')
+        onDone(`Changed type from ${currentType} to ${newType}.`)
+      })
+    }}>
+      <label>Node</label>
+      <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
+      <label>New type</label>
+      <select value={newType} onChange={(e) => setNewType(e.target.value)} disabled={!node}>
+        <option value="">Select new type…</option>
+        {NODE_TYPES.map((nt) => (
+          currentType && nt.type !== currentType ? (
+            <option key={nt.type} value={nt.type}>{nt.label}</option>
+          ) : null
+        ))}
+      </select>
+      {currentType && newType && (
+        <div className="info-row" style={{ fontSize: '0.9em', marginTop: 8 }}>
+          ℹ️ Node will be converted from {currentType} to {newType}
+        </div>
+      )}
+      <button className="primary" type="submit" disabled={!node || !newType || currentType === newType}>
+        Change type
+      </button>
     </form>
   )
 }
