@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
@@ -40,11 +41,8 @@ export default function KeyPlayers({ refreshKey }) {
 
   const isAllCases = mode === 'all-cases'
 
-  return (
-    <Panel
-      title="Key Player Identification"
-      hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}
-    >
+  const renderError = () => (
+    <Panel title="Key Player Identification">
       <select
         value={isAllCases ? '__all__' : selectedCaseId}
         onChange={(e) => {
@@ -56,7 +54,7 @@ export default function KeyPlayers({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        style={{ padding: '6px 12px', minWidth: 250, marginBottom: 16 }}
+        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -66,27 +64,129 @@ export default function KeyPlayers({ refreshKey }) {
           </option>
         ))}
       </select>
+      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error}</div>
+    </Panel>
+  )
 
-      {error && <div className="alert-row">{error}</div>}
-      {!error && !data && (
-        <p className="empty-state">
-          {mode === 'this-case' && !selectedCaseId
-            ? 'Select a case to view key player analysis.'
-            : 'Loading…'}
-        </p>
+  const renderLoading = () => (
+    <Panel title="Key Player Identification" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
+      <select
+        value={isAllCases ? '__all__' : selectedCaseId}
+        onChange={(e) => {
+          if (e.target.value === '__all__') {
+            setMode('all-cases')
+            setSelectedCaseId('')
+          } else {
+            setMode('this-case')
+            setSelectedCaseId(e.target.value)
+          }
+        }}
+        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
+      >
+        <option value="">Select a case…</option>
+        <option value="__all__">All cases</option>
+        {cases.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+      <p className="text-muted text-center py-8">{mode === 'this-case' && !selectedCaseId
+        ? 'Select a case to view key player analysis.'
+        : 'Loading…'}
+      </p>
+    </Panel>
+  )
+
+  const renderNoData = () => (
+    <Panel title="Key Player Identification" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
+      <select
+        value={isAllCases ? '__all__' : selectedCaseId}
+        onChange={(e) => {
+          if (e.target.value === '__all__') {
+            setMode('all-cases')
+            setSelectedCaseId('')
+          } else {
+            setMode('this-case')
+            setSelectedCaseId(e.target.value)
+          }
+        }}
+        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
+      >
+        <option value="">Select a case…</option>
+        <option value="__all__">All cases</option>
+        {cases.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+      {data && data.message ? (
+        <p className="text-muted text-center py-8">{data.message}</p>
+      ) : (
+        <p className="text-muted text-center py-8">No key players detected.</p>
       )}
-      {data && data.message && <p className="empty-state">{data.message}</p>}
-      {data && !data.message && (
-        <div>
-          {data.ranked.map((row, i) => (
-            <div className="rank-row" key={row.name}>
-              <span className="rank-row__name">#{i + 1} {row.name}</span>
-              <span className="rank-row__scores">
-                PageRank {row.pagerank.toFixed(4)} · Betweenness {row.betweenness.toFixed(4)}
-              </span>
-            </div>
+    </Panel>
+  )
+
+  if (error) return renderError()
+  if (!data) return renderLoading()
+  if (data && data.message && !data.ranked) return renderNoData()
+
+  return (
+    <Panel title="Key Player Identification" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
+      <div className="mb-4">
+        <select
+          value={isAllCases ? '__all__' : selectedCaseId}
+          onChange={(e) => {
+            if (e.target.value === '__all__') {
+              setMode('all-cases')
+              setSelectedCaseId('')
+            } else {
+              setMode('this-case')
+              setSelectedCaseId(e.target.value)
+            }
+          }}
+          className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        >
+          <option value="">Select a case…</option>
+          <option value="__all__">All cases</option>
+          {cases.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
-        </div>
+        </select>
+      </div>
+
+      {data && data.ranked && data.ranked.length > 0 ? (
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {data.ranked.map((row, index) => (
+            <motion.div
+              key={row.name}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="flex items-center justify-between px-4 py-3 bg-panel-raised/50 border border-border/50 rounded-lg hover:bg-panel-raised/70 transition-colors"
+            >
+              <span className="flex items-center gap-2 text-sm font-medium text-text">
+                <span className="text-muted/60">#{index + 1}</span>
+                <span className="font-semibold">{row.name}</span>
+              </span>
+              <span className="text-xs font-mono flex items-center gap-2 text-muted">
+                <span>PageRank {row.pagerank.toFixed(4)}</span>
+                <span>·</span>
+                <span>Betweenness {row.betweenness.toFixed(4)}</span>
+              </span>
+            </motion.div>
+          ))}
+        </motion.div>
+      ) : (
+        <p className="text-muted text-center py-8">No key players detected.</p>
       )}
     </Panel>
   )
