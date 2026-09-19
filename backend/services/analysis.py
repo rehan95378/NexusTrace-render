@@ -175,9 +175,14 @@ def anomalies_all_cases():
 
     bridges = []
     cluster_count = len(components)
-    if cluster_count <= 1:
-        cut_vertices = list(nx.articulation_points(undirected)) if undirected.number_of_nodes() > 2 else []
-        bridges = [n for n in cut_vertices if n in person_nodes]
+
+    # Find articulation points (bridge nodes) for each connected component
+    # This helps identify nodes whose removal would split a cluster
+    for component in components:
+        if len(component) > 2:  # Need at least 3 nodes for articulation points
+            subgraph = undirected.subgraph(component).copy()
+            cut_vertices = list(nx.articulation_points(subgraph))
+            bridges.extend([n for n in cut_vertices if n in person_nodes])
 
     return {
         "message": None,
