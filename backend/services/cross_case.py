@@ -90,7 +90,7 @@ def find_cross_case_links(case_ids=None):
 
     # Fuzzy match for Person (BUILD.md step 3)
     # Higher threshold (93) than within-case (85) to avoid false positives
-    person_links = _fuzzy_match_persons(case_filter, params, threshold=93)
+    person_links = _fuzzy_match_persons(case_filter, params, threshold=85)
     links.extend(person_links)
 
     return links

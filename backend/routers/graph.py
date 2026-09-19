@@ -57,9 +57,10 @@ def get_graph(case_id: str):
             seen.add(key)
 
     results = db.query(
-        "MATCH (n {case_id: $case_id})-[r]->(m {case_id: $case_id}) "
+        f"MATCH (n {{case_id: $case_id}})-[r]->(m) WHERE ({label_filter}) "
+        "AND m.case_id IS NOT NULL "
         "RETURN n.id AS n_id, labels(n) AS n_labels, "
-        "m.id AS m_id, labels(m) AS m_labels, type(r) AS rel_type, "
+        "m.id AS m_id, labels(m) AS m_labels, m.case_id AS m_case_id, type(r) AS rel_type, "
         "coalesce(r.confidence, 1) AS confidence",
         {"case_id": case_id},
     )
@@ -68,7 +69,15 @@ def get_graph(case_id: str):
         n_label = record["n_labels"][0] if record["n_labels"] else "Unknown"
         m_label = record["m_labels"][0] if record["m_labels"] else "Unknown"
         n_id, m_id = record["n_id"], record["m_id"]
-        n_key, m_key = node_key(n_label, n_id), node_key(m_label, m_id)
+        m_case_id = record.get("m_case_id")
+
+        # For single-case view, we use simple keys for nodes in this case
+        # For cross-case nodes, we need to include case_id in the key
+        n_key = node_key(n_label, n_id)
+        if m_case_id and m_case_id != case_id:
+            m_key = all_case_node_key(m_case_id, m_label, m_id)
+        else:
+            m_key = node_key(m_label, m_id)
 
         # Defensive: in case either endpoint wasn't picked up by the node
         # query above for some reason, don't silently drop the edge.
@@ -77,15 +86,64 @@ def get_graph(case_id: str):
                           "color": COLOR_MAP.get(n_label, "#8A8A8A")})
             seen.add(n_key)
         if m_key not in seen:
-            nodes.append({"id": m_key, "label": f"{m_label}: {m_id}", "type": m_label,
-                          "color": COLOR_MAP.get(m_label, "#8A8A8A")})
+            # For cross-case target node, include case info
+            node_data = {"id": m_key, "label": f"{m_label}: {m_id}", "type": m_label,
+                         "color": COLOR_MAP.get(m_label, "#8A8A8A")}
+            if m_case_id and m_case_id != case_id:
+                node_data["case_id"] = m_case_id
+            nodes.append(node_data)
             seen.add(m_key)
+
+        edge_data = {
+            "source": n_key,
+            "target": m_key,
+            "label": record["rel_type"],
+            "confidence": record["confidence"],
+        }
+        # Mark cross-case edges so frontend can identify them
+        if m_case_id and m_case_id != case_id:
+            edge_data["link_type"] = "cross_case"
+            edge_data["case_id"] = m_case_id
+        edges.append(edge_data)
+
+    # Also get incoming relationships from other cases to this case
+    incoming_results = db.query(
+        f"MATCH (n)-[r]->(m {{case_id: $case_id}}) WHERE ({label_filter}) "
+        "AND n.case_id IS NOT NULL AND n.case_id <> $case_id "
+        "RETURN n.id AS n_id, labels(n) AS n_labels, n.case_id AS n_case_id, "
+        "m.id AS m_id, labels(m) AS m_labels, type(r) AS rel_type, "
+        "coalesce(r.confidence, 1) AS confidence",
+        {"case_id": case_id},
+    )
+
+    for record in incoming_results:
+        n_label = record["n_labels"][0] if record["n_labels"] else "Unknown"
+        m_label = record["m_labels"][0] if record["m_labels"] else "Unknown"
+        n_id, m_id = record["n_id"], record["m_id"]
+        n_case_id = record.get("n_case_id")
+
+        # Source node is from another case
+        n_key = all_case_node_key(n_case_id, n_label, n_id)
+        m_key = node_key(m_label, m_id)
+
+        # Add source node if not already in seen
+        if n_key not in seen:
+            nodes.append({
+                "id": n_key,
+                "label": f"{n_label}: {n_id}",
+                "type": n_label,
+                "color": COLOR_MAP.get(n_label, "#8A8A8A"),
+                "case_id": n_case_id
+            })
+            seen.add(n_key)
 
         edges.append({
             "source": n_key,
             "target": m_key,
             "label": record["rel_type"],
             "confidence": record["confidence"],
+            "link_type": "cross_case",
+            "case_id": n_case_id
         })
 
     return {"nodes": nodes, "edges": edges}

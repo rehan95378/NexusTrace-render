@@ -69,6 +69,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ merge_with: mergeWith }),
     }),
+  changeEntityType: (caseId, type, id, newType) =>
+    request(`/cases/${caseId}/entities/${type}/${encodeURIComponent(id)}/type`, {
+      method: 'PATCH',
+      body: JSON.stringify({ new_type: newType }),
+    }),
   addRelationship: (caseId, payload) =>
     request(`/cases/${caseId}/relationships`, { method: 'POST', body: JSON.stringify(payload) }),
   renameRelationship: (caseId, payload) =>
