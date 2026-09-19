@@ -41,8 +41,11 @@ export const api = {
   graph: (caseId) => request(`/cases/${caseId}/graph`),
   allGraph: () => request('/graph/all'),
   keyPlayers: (caseId) => request(`/cases/${caseId}/analysis/key-players`),
+  keyPlayersAll: () => request('/analysis/key-players/all'),
   anomalies: (caseId) => request(`/cases/${caseId}/analysis/anomalies`),
+  anomaliesAll: () => request('/analysis/anomalies/all'),
   audit: (caseId) => request(`/cases/${caseId}/audit`),
+  auditAll: () => request('/audit/all'),
 
   // Node click popup: read-only entity detail
   entityDetail: (caseId, type, id) =>

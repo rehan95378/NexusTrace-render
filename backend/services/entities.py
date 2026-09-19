@@ -250,24 +250,48 @@ def merge_entities(case_id, label, keep_id, merge_id):
     audit.log(case_id, "MERGE_ENTITY", {"type": label, "kept": keep_id, "merged_away": merge_id})
 
 
-def add_relationship(case_id, source_type, source_id, target_type, target_id, rel_type):
+def add_relationship(source_case_id, source_type, source_id, target_case_id, target_type, target_id, rel_type):
+    """
+    Create a relationship between two entities.
+    Supports cross-case relationships when source_case_id != target_case_id.
+    """
     _check_label(source_type)
     _check_label(target_type)
     rel_type = sanitize_rel_type(rel_type)
+
     rows = db.query(
-        f"MATCH (a:{source_type} {{id: $s, case_id: $case_id}}), "
-        f"(b:{target_type} {{id: $t, case_id: $case_id}}) "
+        f"MATCH (a:{source_type} {{id: $s, case_id: $source_case}}), "
+        f"(b:{target_type} {{id: $t, case_id: $target_case}}) "
         f"MERGE (a)-[r:{rel_type}]->(b) "
         "SET r.confidence = coalesce(r.confidence, 0) + 1 "
         "RETURN a.id AS s, b.id AS t",
-        {"s": source_id, "t": target_id, "case_id": case_id},
+        {"s": source_id, "t": target_id, "source_case": source_case_id, "target_case": target_case_id},
     )
     if not rows:
         raise LookupError("Source or target entity not found.")
-    audit.log(case_id, "ADD_RELATIONSHIP", {
-        "type": rel_type, "from": source_id, "to": target_id, "source": "manual",
+
+    # Log to the source case's audit trail
+    is_cross_case = source_case_id != target_case_id
+    audit.log(source_case_id, "ADD_RELATIONSHIP", {
+        "type": rel_type,
+        "from": source_id,
+        "to": target_id,
+        "source": "manual",
+        "cross_case": is_cross_case,
+        "target_case_id": target_case_id if is_cross_case else None
     })
-    return {"type": rel_type}
+
+    # Also log to target case if it's cross-case
+    if is_cross_case:
+        audit.log(target_case_id, "ADD_CROSS_CASE_RELATIONSHIP", {
+            "type": rel_type,
+            "from": source_id,
+            "to": target_id,
+            "source": "manual",
+            "source_case_id": source_case_id
+        })
+
+    return {"type": rel_type, "cross_case": is_cross_case}
 
 
 def rename_relationship(case_id, source_type, source_id, target_type, target_id,

@@ -99,6 +99,7 @@ class RelationshipRequest(BaseModel):
     target_type: str
     target_id: str
     rel_type: str
+    target_case_id: str = None  # Optional: for cross-case relationships
 
 
 class RenameRelationshipRequest(BaseModel):
@@ -113,9 +114,11 @@ class RenameRelationshipRequest(BaseModel):
 @router.post("/cases/{case_id}/relationships")
 def add_relationship(case_id: str, payload: RelationshipRequest):
     try:
+        # Support cross-case relationships: target_case_id overrides case_id for target node
+        target_case = payload.target_case_id if payload.target_case_id else case_id
         result = entity_service.add_relationship(
             case_id, payload.source_type, payload.source_id,
-            payload.target_type, payload.target_id, payload.rel_type,
+            target_case, payload.target_type, payload.target_id, payload.rel_type,
         )
     except LookupError as e:
         raise HTTPException(404, str(e))

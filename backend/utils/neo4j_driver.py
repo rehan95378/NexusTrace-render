@@ -66,6 +66,56 @@ def fetch_graph_edges(case_id):
     )
 
 
+def fetch_all_graph_edges():
+    """All relationships across every case, plus cross-case links.
+    Returns edges in the same format as fetch_graph_edges but includes
+    case_id for each node so analysis can build the combined graph.
+    Used by all-cases Key Players and Anomaly Detection."""
+    from services import cross_case
+
+    # Within-case edges across all cases
+    # IMPORTANT: Node identifiers must be case_id:node_id format to keep
+    # same-named entities in different cases distinct
+    edges = []
+    raw_edges = query(
+        "MATCH (n)-[r]->(m) WHERE n.case_id = m.case_id "
+        "RETURN n.id AS src, n.case_id AS src_case, m.id AS tgt, "
+        "m.case_id AS tgt_case, type(r) AS rel, "
+        "labels(n) AS src_labels, labels(m) AS tgt_labels, "
+        "coalesce(r.confidence, 1) AS confidence"
+    )
+
+    for edge in raw_edges:
+        edges.append({
+            "src": f"{edge['src_case']}:{edge['src']}",
+            "src_case": edge["src_case"],
+            "tgt": f"{edge['tgt_case']}:{edge['tgt']}",
+            "tgt_case": edge["tgt_case"],
+            "rel": edge["rel"],
+            "src_labels": edge["src_labels"],
+            "tgt_labels": edge["tgt_labels"],
+            "confidence": edge["confidence"]
+        })
+
+    # Cross-case link edges (Phone/Vehicle/Organization exact match + Person fuzzy)
+    # These are virtual edges computed on-demand, not stored in Neo4j
+    for link in cross_case.find_cross_case_links():
+        # Format: same as within-case edges but with cross-case node identifiers
+        label = "SAME_PERSON_LIKELY" if link["match_kind"] == "fuzzy" else f"SAME_{link['type'].upper()}"
+        edges.append({
+            "src": f"{link['case_a']}:{link['id_a']}",
+            "src_case": link["case_a"],
+            "tgt": f"{link['case_b']}:{link['id_b']}",
+            "tgt_case": link["case_b"],
+            "rel": label,
+            "src_labels": [link["type"]],
+            "tgt_labels": [link["type"]],
+            "confidence": link.get("score", 100) / 100.0  # normalize to 0-1
+        })
+
+    return edges
+
+
 def close_driver():
     global _driver
     if _driver is not None:

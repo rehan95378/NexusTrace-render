@@ -128,3 +128,42 @@ def clear(case_id):
     db.query("MATCH (a:AuditEntry {case_id: $case_id}) DETACH DELETE a", {"case_id": case_id})
     with _lock:
         _cache.pop(case_id, None)
+
+
+def list_all_entries(limit=500):
+    """
+    Global audit log across all cases, sorted by timestamp.
+
+    Each entry is tagged with its case_id so it's still traceable.
+    Used by AuditTrail's global view (BUILD.md section 3.7).
+    """
+    rows = db.query(
+        "MATCH (a:AuditEntry) RETURN a.case_id AS case_id, a.seq AS seq, "
+        "a.timestamp AS timestamp, a.action AS action, a.details AS details, "
+        "a.prev_hash AS prev_hash, a.hash AS hash "
+        "ORDER BY a.timestamp DESC LIMIT $limit",
+        {"limit": limit},
+    )
+    for r in rows:
+        try:
+            r["details"] = json.loads(r["details"])
+        except (TypeError, ValueError):
+            pass
+    return rows
+
+
+def verify_all_chains():
+    """
+    Verify the hash chain for each case independently.
+
+    Returns a dict mapping case_id -> {"valid": bool, "broken_entry": dict|None}.
+    Per BUILD.md: audit chain verification is per-case by design, not one
+    combined chain across cases.
+    """
+    cases = db.query("MATCH (c:Case) RETURN c.id AS id")
+    results = {}
+    for case in cases:
+        case_id = case["id"]
+        valid, broken_entry = verify_chain(case_id)
+        results[case_id] = {"valid": valid, "broken_entry": broken_entry}
+    return results

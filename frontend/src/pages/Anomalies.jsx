@@ -2,21 +2,108 @@ import { useEffect, useState } from 'react'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
-export default function Anomalies({ caseId, refreshKey }) {
+const LAST_CASE_KEY = 'sih_last_anomalies_case_id'
+
+export default function Anomalies({ refreshKey }) {
+  const [mode, setMode] = useState('this-case')
+  const [cases, setCases] = useState([])
+  const [selectedCaseId, setSelectedCaseId] = useState('')
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    api.anomalies(caseId).then(setData).catch((e) => setError(e.message))
-  }, [caseId, refreshKey])
+    api.listCases().then((list) => {
+      setCases(list)
+      const lastId = localStorage.getItem(LAST_CASE_KEY)
+      if (lastId && list.find(c => c.id === lastId)) {
+        setSelectedCaseId(lastId)
+      }
+    })
+  }, [])
 
-  if (error) return <Panel title="Suspicious Pattern Detection"><div className="alert-row">{error}</div></Panel>
-  if (!data) return <Panel title="Suspicious Pattern Detection"><p className="empty-state">Loading…</p></Panel>
-  if (data.message) return <Panel title="Suspicious Pattern Detection"><p className="empty-state">{data.message}</p></Panel>
+  useEffect(() => {
+    if (selectedCaseId) {
+      localStorage.setItem(LAST_CASE_KEY, selectedCaseId)
+    }
+  }, [selectedCaseId])
+
+  useEffect(() => {
+    setData(null)
+    setError(null)
+
+    if (mode === 'all-cases') {
+      api.anomaliesAll().then(setData).catch((e) => setError(e.message))
+    } else if (selectedCaseId) {
+      api.anomalies(selectedCaseId).then(setData).catch((e) => setError(e.message))
+    }
+  }, [mode, selectedCaseId, refreshKey])
+
+  const isAllCases = mode === 'all-cases'
+  const scopeControls = (
+    <div style={{ marginBottom: 16, display: 'flex', gap: 16, alignItems: 'center' }}>
+      <div>
+        <label style={{ marginRight: 8 }}>
+          <input
+            type="radio"
+            value="this-case"
+            checked={mode === 'this-case'}
+            onChange={(e) => setMode(e.target.value)}
+          />
+          This case
+        </label>
+        <label>
+          <input
+            type="radio"
+            value="all-cases"
+            checked={mode === 'all-cases'}
+            onChange={(e) => setMode(e.target.value)}
+          />
+          All cases
+        </label>
+      </div>
+
+      {mode === 'this-case' && (
+        <select
+          value={selectedCaseId}
+          onChange={(e) => setSelectedCaseId(e.target.value)}
+          style={{ padding: '6px 12px', minWidth: 250 }}
+        >
+          <option value="">Select a case…</option>
+          {cases.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  )
+
+  if (error) return (
+    <Panel title="Suspicious Pattern Detection">
+      {scopeControls}
+      <div className="alert-row">{error}</div>
+    </Panel>
+  )
+
+  if (!data) return (
+    <Panel title="Suspicious Pattern Detection">
+      {scopeControls}
+      <p className="empty-state">Loading…</p>
+    </Panel>
+  )
+
+  if (data.message) return (
+    <Panel title="Suspicious Pattern Detection">
+      {scopeControls}
+      <p className="empty-state">{data.message}</p>
+    </Panel>
+  )
 
   return (
     <>
       <Panel title="Financial Transaction Cycles">
+        {scopeControls}
         {data.cycles.length === 0 && <p className="empty-state">No circular financial trails detected in current data.</p>}
         {data.cycles.map((cycle, i) => (
           <div className="alert-row" key={i}>Circular financial trail detected: {cycle.join(' → ')}</div>

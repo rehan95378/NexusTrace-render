@@ -27,13 +27,11 @@ function splitKey(key) {
 /**
  * The single entry point for every graph-editing action: create/rename/
  * delete/merge nodes, and create/rename/delete relationships (freely
- * named). Opened via the "Edit graph" button on the Evidence Graph Map —
- * intentionally separate from the node-click popup, which stays read-only.
- * Every successful action re-fetches this panel's own node/edge lists and
- * calls onChanged(), which the caller wires to refresh Entities, Key
- * Players, Anomalies, and the Audit Trail too.
+ * named). Opened via the "Edit graph" button on the Evidence Graph Map.
+ * In all-cases mode, allows creating relationships between nodes in different
+ * cases (cross-case manual linking).
  */
-export default function GraphEditPanel({ caseId, onClose, onChanged }) {
+export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChanged }) {
   const [tab, setTab] = useState('create-node')
   const [entities, setEntities] = useState(null)
   const [edges, setEdges] = useState(null)
@@ -41,35 +39,120 @@ export default function GraphEditPanel({ caseId, onClose, onChanged }) {
   const [status, setStatus] = useState(null)
 
   function refreshLists() {
-    api.entities(caseId).then(setEntities).catch(() => {})
-    api.graph(caseId).then((g) => setEdges(g.edges)).catch(() => {})
+    if (allCasesMode) {
+      api.allEntities().then(setEntities).catch(() => {})
+      api.allGraph().then((g) => setEdges(g.edges)).catch(() => {})
+    } else {
+      api.entities(caseId).then(setEntities).catch(() => {})
+      api.graph(caseId).then((g) => setEdges(g.edges)).catch(() => {})
+    }
   }
 
   useEffect(() => {
     refreshLists()
     api.relationshipTypeSuggestions().then((r) => setSuggestions(r.suggestions)).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseId])
+  }, [caseId, allCasesMode])
 
   const nodeOptions = useMemo(() => {
     if (!entities) return []
-    const out = []
-    for (const nt of NODE_TYPES) {
-      for (const value of entities[nt.key] || []) {
-        out.push({ type: nt.type, id: value, label: `${nt.label}: ${value}` })
+
+    if (allCasesMode) {
+      // All-cases mode: entities array has { type, value, case_id, case_name }
+      // type is lowercase (e.g., "person", "phone") so capitalize it
+      const typeMap = {
+        'person': 'Person',
+        'location': 'Location',
+        'vehicle': 'Vehicle',
+        'phone': 'Phone',
+        'organization': 'Organization'
       }
+
+      // Defensive: ensure entities is an array
+      if (!Array.isArray(entities)) {
+        console.error('Expected entities to be an array in all-cases mode, got:', entities)
+        return []
+      }
+
+      return entities.map((e) => {
+        // Defensive: ensure entity has required fields
+        if (!e || !e.type || !e.value || !e.case_id) {
+          console.warn('Skipping invalid entity:', e)
+          return null
+        }
+
+        return {
+          type: typeMap[e.type] || e.type.charAt(0).toUpperCase() + e.type.slice(1),
+          id: e.value,
+          caseId: e.case_id,
+          label: `${typeMap[e.type] || e.type}: ${e.value} [${e.case_name || e.case_id}]`
+        }
+      }).filter(Boolean) // Remove any null entries
+    } else {
+      // Single-case mode: entities object has { people: [], phones: [], ... }
+      const out = []
+      for (const nt of NODE_TYPES) {
+        for (const value of entities[nt.key] || []) {
+          out.push({ type: nt.type, id: value, caseId, label: `${nt.label}: ${value}` })
+        }
+      }
+      return out
     }
-    return out
-  }, [entities])
+  }, [entities, allCasesMode, caseId])
 
   const edgeOptions = useMemo(() => {
     if (!edges) return []
-    return edges.map((e) => {
-      const [sType, sId] = splitKey(e.source)
-      const [tType, tId] = splitKey(e.target)
-      return { sType, sId, tType, tId, relType: e.label, display: `${sId} —[${e.label}]→ ${tId}` }
-    })
-  }, [edges])
+
+    // Defensive: ensure edges is an array
+    if (!Array.isArray(edges)) {
+      console.error('Expected edges to be an array, got:', edges)
+      return []
+    }
+
+    return edges.map((e, index) => {
+      // Defensive: ensure edge has required fields
+      if (!e || !e.source || !e.target || !e.label) {
+        console.warn('Skipping invalid edge:', e)
+        return null
+      }
+
+      let sType, sId, tType, tId, sCaseId, tCaseId
+
+      try {
+        if (allCasesMode) {
+          // All-cases format: "case_id:Type:id"
+          const sParts = e.source.split(':')
+          const tParts = e.target.split(':')
+          sCaseId = sParts[0]
+          sType = sParts[1]
+          sId = sParts.slice(2).join(':')
+          tCaseId = tParts[0]
+          tType = tParts[1]
+          tId = tParts.slice(2).join(':')
+        } else {
+          // Single-case format: "Type:id"
+          const [sT, ...sRest] = e.source.split(':')
+          const [tT, ...tRest] = e.target.split(':')
+          sType = sT
+          sId = sRest.join(':')
+          tType = tT
+          tId = tRest.join(':')
+          sCaseId = caseId
+          tCaseId = caseId
+        }
+
+        return {
+          sType, sId, sCaseId,
+          tType, tId, tCaseId,
+          relType: e.label,
+          display: `${sId} —[${e.label}]→ ${tId}${allCasesMode && sCaseId !== tCaseId ? ` [cross: ${sCaseId}→${tCaseId}]` : ''}`
+        }
+      } catch (err) {
+        console.error('Error parsing edge:', e, err)
+        return null
+      }
+    }).filter(Boolean) // Remove any null entries
+  }, [edges, allCasesMode, caseId])
 
   function notifyChanged(message) {
     setStatus({ kind: 'success', message })
@@ -113,24 +196,24 @@ export default function GraphEditPanel({ caseId, onClose, onChanged }) {
         )}
 
         <div className="edit-modal__body">
-          {tab === 'create-node' && <CreateNodeForm caseId={caseId} onDone={notifyChanged} guard={guard} />}
+          {tab === 'create-node' && <CreateNodeForm caseId={caseId} allCasesMode={allCasesMode} onDone={notifyChanged} guard={guard} />}
           {tab === 'create-rel' && (
-            <CreateRelForm caseId={caseId} nodeOptions={nodeOptions} suggestions={suggestions} onDone={notifyChanged} guard={guard} />
+            <CreateRelForm caseId={caseId} allCasesMode={allCasesMode} nodeOptions={nodeOptions} suggestions={suggestions} onDone={notifyChanged} guard={guard} />
           )}
           {tab === 'rename-node' && (
-            <RenameNodeForm caseId={caseId} nodeOptions={nodeOptions} onDone={notifyChanged} guard={guard} />
+            <RenameNodeForm caseId={caseId} allCasesMode={allCasesMode} nodeOptions={nodeOptions} onDone={notifyChanged} guard={guard} />
           )}
           {tab === 'rename-rel' && (
-            <RenameRelForm caseId={caseId} edgeOptions={edgeOptions} onDone={notifyChanged} guard={guard} />
+            <RenameRelForm caseId={caseId} allCasesMode={allCasesMode} edgeOptions={edgeOptions} onDone={notifyChanged} guard={guard} />
           )}
           {tab === 'merge' && (
-            <MergeNodesForm caseId={caseId} nodeOptions={nodeOptions} onDone={notifyChanged} guard={guard} />
+            <MergeNodesForm caseId={caseId} allCasesMode={allCasesMode} nodeOptions={nodeOptions} onDone={notifyChanged} guard={guard} />
           )}
           {tab === 'delete-node' && (
-            <DeleteNodeForm caseId={caseId} nodeOptions={nodeOptions} onDone={notifyChanged} guard={guard} />
+            <DeleteNodeForm caseId={caseId} allCasesMode={allCasesMode} nodeOptions={nodeOptions} onDone={notifyChanged} guard={guard} />
           )}
           {tab === 'delete-rel' && (
-            <DeleteRelForm caseId={caseId} edgeOptions={edgeOptions} onDone={notifyChanged} guard={guard} />
+            <DeleteRelForm caseId={caseId} allCasesMode={allCasesMode} edgeOptions={edgeOptions} onDone={notifyChanged} guard={guard} />
           )}
         </div>
       </div>
@@ -143,16 +226,28 @@ function NodeSelect({ options, value, onChange }) {
     <select value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">Select a node…</option>
       {options.map((o) => (
-        <option key={`${o.type}::${o.id}`} value={`${o.type}::${o.id}`}>{o.label}</option>
+        <option key={`${o.caseId}::${o.type}::${o.id}`} value={`${o.caseId}::${o.type}::${o.id}`}>{o.label}</option>
       ))}
     </select>
   )
 }
 
 // 6. Create new node
-function CreateNodeForm({ caseId, onDone, guard }) {
+// Only available in single-case mode - can't create without specifying a case
+function CreateNodeForm({ caseId, allCasesMode, onDone, guard }) {
   const [type, setType] = useState('Person')
   const [value, setValue] = useState('')
+
+  if (allCasesMode) {
+    return (
+      <div className="edit-form" style={{ padding: '20px', textAlign: 'center', color: '#8fa0a3' }}>
+        Node creation is only available in single-case mode.
+        <br />
+        Switch to "This case" to create new entities.
+      </div>
+    )
+  }
+
   return (
     <form className="edit-form" onSubmit={(e) => {
       e.preventDefault()
@@ -175,22 +270,35 @@ function CreateNodeForm({ caseId, onDone, guard }) {
 }
 
 // 7. Create relationship between existing nodes, named freely
-function CreateRelForm({ caseId, nodeOptions, suggestions, onDone, guard }) {
+// Supports cross-case relationships in all-cases mode
+function CreateRelForm({ caseId, allCasesMode, nodeOptions, suggestions, onDone, guard }) {
   const [source, setSource] = useState('')
   const [target, setTarget] = useState('')
   const [relType, setRelType] = useState('')
   return (
     <form className="edit-form" onSubmit={(e) => {
       e.preventDefault()
-      const [sType, sId] = source.split('::')
-      const [tType, tId] = target.split('::')
+      const sourceParts = source.split('::')
+      const targetParts = target.split('::')
+
+      // Parse format: caseId::Type::id (works for both single-case and all-cases)
+      const sCaseId = sourceParts[0]
+      const sType = sourceParts[1]
+      const sId = sourceParts.slice(2).join('::')
+      const tCaseId = targetParts[0]
+      const tType = targetParts[1]
+      const tId = targetParts.slice(2).join('::')
+
       guard(async () => {
-        await api.addRelationship(caseId, {
-          source_type: sType, source_id: sId, target_type: tType, target_id: tId, rel_type: relType,
+        await api.addRelationship(sCaseId, {
+          source_type: sType, source_id: sId,
+          target_type: tType, target_id: tId,
+          target_case_id: tCaseId, // For cross-case relationships
+          rel_type: relType,
         })
-        const name = relType
+        const crossCaseNote = sCaseId !== tCaseId ? ' (cross-case)' : ''
         setRelType('')
-        onDone(`Created relationship "${name}" from ${sId} to ${tId}.`)
+        onDone(`Created relationship "${relType}" from ${sId} to ${tId}${crossCaseNote}.`)
       })
     }}>
       <label>From node</label>
@@ -201,13 +309,18 @@ function CreateRelForm({ caseId, nodeOptions, suggestions, onDone, guard }) {
       <input
         value={relType}
         onChange={(e) => setRelType(e.target.value)}
-        placeholder="e.g. Business Partner"
+        placeholder="e.g. Business Partner, Connected To"
         list="rel-type-suggestions"
         required
       />
       <datalist id="rel-type-suggestions">
         {suggestions.map((s) => <option key={s} value={s} />)}
       </datalist>
+      {allCasesMode && source && target && source.split('::')[0] !== target.split('::')[0] && (
+        <div className="info-row" style={{ fontSize: '0.9em', marginTop: 8 }}>
+          ⚠️ Creating cross-case relationship between different cases
+        </div>
+      )}
       <button className="primary" type="submit" disabled={!source || !target || !relType.trim()}>
         Create relationship
       </button>
@@ -216,15 +329,20 @@ function CreateRelForm({ caseId, nodeOptions, suggestions, onDone, guard }) {
 }
 
 // 1. Rename any node
-function RenameNodeForm({ caseId, nodeOptions, onDone, guard }) {
+function RenameNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
   const [node, setNode] = useState('')
   const [newValue, setNewValue] = useState('')
   return (
     <form className="edit-form" onSubmit={(e) => {
       e.preventDefault()
-      const [type, id] = node.split('::')
+      // Parse format: caseId::Type::id
+      const parts = node.split('::')
+      const nodeCaseId = parts[0]
+      const type = parts[1]
+      const id = parts.slice(2).join('::')
+
       guard(async () => {
-        await api.renameEntity(caseId, type, id, newValue.trim())
+        await api.renameEntity(nodeCaseId, type, id, newValue.trim())
         const to = newValue.trim()
         setNewValue('')
         onDone(`Renamed ${id} to ${to}.`)
@@ -273,17 +391,36 @@ function RenameRelForm({ caseId, edgeOptions, onDone, guard }) {
 }
 
 // 5. Merge nodes
-function MergeNodesForm({ caseId, nodeOptions, onDone, guard }) {
+function MergeNodesForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
   const [keep, setKeep] = useState('')
   const [merge, setMerge] = useState('')
-  const keepType = keep.split('::')[0]
+
+  // Parse keep node format: caseId::Type::id
+  const keepParts = keep.split('::')
+  const keepType = keepParts[1] // Type is at position 1
+
   return (
     <form className="edit-form" onSubmit={(e) => {
       e.preventDefault()
-      const [keepTypeVal, keepId] = keep.split('::')
-      const [, mergeId] = merge.split('::')
+      // Parse format: caseId::Type::id
+      const keepCaseId = keepParts[0]
+      const keepTypeVal = keepParts[1]
+      const keepId = keepParts.slice(2).join('::')
+
+      const mergeParts = merge.split('::')
+      const mergeCaseId = mergeParts[0]
+      const mergeId = mergeParts.slice(2).join('::')
+
+      // Only allow merging within the same case
+      if (keepCaseId !== mergeCaseId) {
+        guard(async () => {
+          throw new Error('Cannot merge nodes from different cases')
+        })
+        return
+      }
+
       guard(async () => {
-        await api.mergeEntity(caseId, keepTypeVal, keepId, mergeId)
+        await api.mergeEntity(keepCaseId, keepTypeVal, keepId, mergeId)
         setMerge('')
         onDone(`Merged ${mergeId} into ${keepId}.`)
       })
@@ -302,15 +439,20 @@ function MergeNodesForm({ caseId, nodeOptions, onDone, guard }) {
 }
 
 // 3. Delete a node
-function DeleteNodeForm({ caseId, nodeOptions, onDone, guard }) {
+function DeleteNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
   const [node, setNode] = useState('')
   return (
     <form className="edit-form" onSubmit={(e) => {
       e.preventDefault()
-      const [type, id] = node.split('::')
+      // Parse format: caseId::Type::id
+      const parts = node.split('::')
+      const nodeCaseId = parts[0]
+      const type = parts[1]
+      const id = parts.slice(2).join('::')
+
       if (!window.confirm(`Delete ${id} and all its relationships?`)) return
       guard(async () => {
-        await api.deleteEntity(caseId, type, id)
+        await api.deleteEntity(nodeCaseId, type, id)
         setNode('')
         onDone(`Deleted ${id}.`)
       })
