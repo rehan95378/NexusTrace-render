@@ -122,15 +122,20 @@ export default function Anomalies({ refreshKey }) {
       </Panel>
 
       <Panel title="Cluster-Bridging Individuals">
-        {data.cluster_count > 1 && (
+        {data.cluster_count > 1 && data.bridges.length === 0 && (
           <p className="empty-state">
-            {data.cluster_count} separate clusters detected in the current graph — no single bridge yet linking them.
+            {data.cluster_count} separate clusters detected in the current graph — no critical bridge individuals within clusters.
+          </p>
+        )}
+        {data.cluster_count > 1 && data.bridges.length > 0 && (
+          <p className="empty-state" style={{ color: 'orange' }}>
+            {data.cluster_count} separate clusters — the following individuals bridge clusters or critical points:
           </p>
         )}
         {data.cluster_count <= 1 && data.bridges.length === 0 && (
           <p className="empty-state">No critical bridge individuals identified.</p>
         )}
-        {data.cluster_count <= 1 && data.bridges.map((name) => (
+        {data.bridges.map((name) => (
           <div className="alert-row" key={name}>{name} — removing this node would split the network into separate clusters.</div>
         ))}
       </Panel>
