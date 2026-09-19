@@ -1,29 +1,180 @@
-from utils.neo4j_driver import fetch_graph_edges
+from fastapi import APIRouter
+
+from utils import neo4j_driver as db
+from services import cross_case
+
+router = APIRouter()
+
+COLOR_MAP = {
+    "Person": "#E3A008",
+    "Location": "#2FA8A0",
+    "Vehicle": "#5B8DEF",
+    "Phone": "#B076E0",
+    "Organization": "#6FCF6F",
+}
+
+NODE_LABELS = list(COLOR_MAP.keys())
 
 
-def get_graph() -> dict:
-    """Nodes/edges for the frontend's evidence graph view."""
-    records = fetch_graph_edges()
+def node_key(label, id_):
+    # Keying on (label, id) rather than just id makes every node's identity
+    # unambiguous within a case, since ids are raw text and two different
+    # entity types could otherwise coincidentally share the same id string.
+    return f"{label}:{id_}"
+
+
+def all_case_node_key(case_id, label, id_):
+    # For the combined all-cases graph, node identity has to include case_id
+    # too — otherwise "Rohan Sharma" in two different, unrelated cases would
+    # collapse into a single node instead of staying two separate people who
+    # just happen to share a name. (Cross-case *linking* — drawing an edge
+    # between genuinely related cross-case entities — is a deliberate
+    # separate step; see BUILD.md. This key just keeps unrelated cases from
+    # accidentally merging by accident of same-text ids.)
+    return f"{case_id}:{label}:{id_}"
+
+
+@router.get("/cases/{case_id}/graph")
+def get_graph(case_id: str):
     nodes, edges, seen = [], [], set()
 
-    for rec in records:
-        src_label = rec["src_labels"][0] if rec["src_labels"] else "Unknown"
-        tgt_label = rec["tgt_labels"][0] if rec["tgt_labels"] else "Unknown"
-        src_key = f"{src_label}:{rec['src']}"
-        tgt_key = f"{tgt_label}:{rec['tgt']}"
+    # Every entity node for this case, regardless of whether it has any
+    # relationships yet — a freshly created node or one whose only
+    # relationship was just deleted still needs to show up on the canvas.
+    label_filter = " OR ".join(f"n:{label}" for label in NODE_LABELS)
+    node_rows = db.query(
+        f"MATCH (n {{case_id: $case_id}}) WHERE {label_filter} "
+        "RETURN n.id AS id, labels(n) AS labels",
+        {"case_id": case_id},
+    )
+    for record in node_rows:
+        label = record["labels"][0] if record["labels"] else "Unknown"
+        node_id = record["id"]
+        key = node_key(label, node_id)
+        if key not in seen:
+            nodes.append({"id": key, "label": f"{label}: {node_id}", "type": label,
+                          "color": COLOR_MAP.get(label, "#8A8A8A")})
+            seen.add(key)
 
-        if src_key not in seen:
-            nodes.append({"id": src_key, "label": f"{src_label}: {rec['src']}", "type": src_label})
-            seen.add(src_key)
-        if tgt_key not in seen:
-            nodes.append({"id": tgt_key, "label": f"{tgt_label}: {rec['tgt']}", "type": tgt_label})
-            seen.add(tgt_key)
+    results = db.query(
+        "MATCH (n {case_id: $case_id})-[r]->(m {case_id: $case_id}) "
+        "RETURN n.id AS n_id, labels(n) AS n_labels, "
+        "m.id AS m_id, labels(m) AS m_labels, type(r) AS rel_type, "
+        "coalesce(r.confidence, 1) AS confidence",
+        {"case_id": case_id},
+    )
+
+    for record in results:
+        n_label = record["n_labels"][0] if record["n_labels"] else "Unknown"
+        m_label = record["m_labels"][0] if record["m_labels"] else "Unknown"
+        n_id, m_id = record["n_id"], record["m_id"]
+        n_key, m_key = node_key(n_label, n_id), node_key(m_label, m_id)
+
+        # Defensive: in case either endpoint wasn't picked up by the node
+        # query above for some reason, don't silently drop the edge.
+        if n_key not in seen:
+            nodes.append({"id": n_key, "label": f"{n_label}: {n_id}", "type": n_label,
+                          "color": COLOR_MAP.get(n_label, "#8A8A8A")})
+            seen.add(n_key)
+        if m_key not in seen:
+            nodes.append({"id": m_key, "label": f"{m_label}: {m_id}", "type": m_label,
+                          "color": COLOR_MAP.get(m_label, "#8A8A8A")})
+            seen.add(m_key)
 
         edges.append({
-            "source": src_key,
-            "target": tgt_key,
-            "type": rec["rel"],
-            "confidence": rec["confidence"],
+            "source": n_key,
+            "target": m_key,
+            "label": record["rel_type"],
+            "confidence": record["confidence"],
         })
 
     return {"nodes": nodes, "edges": edges}
+
+
+@router.get("/graph/all")
+def get_all_graph():
+    """Combined graph across every case — backs the Evidence Graph Map's
+    'All cases' toggle. Each node/edge carries its case_id/case_name so the
+    frontend can render per-case show/hide checkboxes and (once BUILD.md
+    steps 2-4 land) style genuine cross-case link edges differently from
+    ordinary in-case relationship edges. No cross-case linking logic here
+    yet — this endpoint is just the combined-cases plumbing (BUILD.md step 1)."""
+    cases = db.query("MATCH (c:Case) RETURN c.id AS id, c.name AS name ORDER BY c.created_at DESC")
+    case_names = {c["id"]: c["name"] for c in cases}
+
+    label_filter_n = " OR ".join(f"n:{label}" for label in NODE_LABELS)
+    label_filter_m = " OR ".join(f"m:{label}" for label in NODE_LABELS)
+
+    nodes, edges, seen = [], [], set()
+
+    node_rows = db.query(
+        f"MATCH (n) WHERE ({label_filter_n}) "
+        "RETURN n.id AS id, labels(n) AS labels, n.case_id AS case_id"
+    )
+    for record in node_rows:
+        label = record["labels"][0] if record["labels"] else "Unknown"
+        case_id = record["case_id"]
+        node_id = record["id"]
+        key = all_case_node_key(case_id, label, node_id)
+        if key not in seen:
+            nodes.append({
+                "id": key,
+                "label": f"{label}: {node_id}",
+                "type": label,
+                "color": COLOR_MAP.get(label, "#8A8A8A"),
+                "case_id": case_id,
+                "case_name": case_names.get(case_id, case_id),
+            })
+            seen.add(key)
+
+    # Only within-case edges for now (n and m in the same case) — cross-case
+    # link edges are added on top in a later BUILD.md step, tagged
+    # link_type: "cross_case" so the frontend can style them distinctly.
+    results = db.query(
+        f"MATCH (n)-[r]->(m) WHERE ({label_filter_n}) AND ({label_filter_m}) "
+        "AND n.case_id = m.case_id "
+        "RETURN n.id AS n_id, labels(n) AS n_labels, n.case_id AS case_id, "
+        "m.id AS m_id, labels(m) AS m_labels, type(r) AS rel_type, "
+        "coalesce(r.confidence, 1) AS confidence"
+    )
+    for record in results:
+        n_label = record["n_labels"][0] if record["n_labels"] else "Unknown"
+        m_label = record["m_labels"][0] if record["m_labels"] else "Unknown"
+        case_id = record["case_id"]
+        n_key = all_case_node_key(case_id, n_label, record["n_id"])
+        m_key = all_case_node_key(case_id, m_label, record["m_id"])
+
+        edges.append({
+            "source": n_key,
+            "target": m_key,
+            "label": record["rel_type"],
+            "confidence": record["confidence"],
+            "case_id": case_id,
+            "link_type": "in_case",
+        })
+
+    # Cross-case links (BUILD.md steps 2-4): exact-match Phone/Vehicle/
+    # Organization + fuzzy-match Person, per the locked rules in
+    # services/cross_case.py. Tagged link_type "cross_case" (vs "in_case"
+    # above) so the frontend renders them as a visually distinct dashed
+    # edge, never confusable with an ordinary in-case relationship.
+    for link in cross_case.find_cross_case_links():
+        source_key = all_case_node_key(link["case_a"], link["type"], link["id_a"])
+        target_key = all_case_node_key(link["case_b"], link["type"], link["id_b"])
+        if source_key not in seen or target_key not in seen:
+            continue  # defensive — both ends should always be in `nodes`
+        label = "SAME PERSON (LIKELY)" if link["match_kind"] == "fuzzy" else "SAME " + link["type"].upper()
+        edges.append({
+            "source": source_key,
+            "target": target_key,
+            "label": label,
+            "link_type": "cross_case",
+            "match_kind": link["match_kind"],
+            "score": link.get("score"),
+        })
+
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "cases": [{"id": c["id"], "name": c["name"]} for c in cases],
+    }

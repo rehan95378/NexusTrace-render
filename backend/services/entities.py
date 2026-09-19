@@ -58,6 +58,48 @@ def sanitize_rel_type(raw):
     return cleaned[:60]
 
 
+def get_entities_for_case(case_id):
+    """The same per-case entity lists GET /cases/{case_id}/entities returns —
+    pulled into a shared helper so the all-cases endpoint isn't a second,
+    drifting copy of this query."""
+    people = [r["v"] for r in db.query(
+        "MATCH (n:Person {case_id: $case_id}) RETURN n.name AS v ORDER BY v", {"case_id": case_id})]
+    locations = [r["v"] for r in db.query(
+        "MATCH (n:Location {case_id: $case_id}) RETURN n.name AS v ORDER BY v", {"case_id": case_id})]
+    vehicles = [r["v"] for r in db.query(
+        "MATCH (n:Vehicle {case_id: $case_id}) RETURN n.plate AS v ORDER BY v", {"case_id": case_id})]
+    phones = [r["v"] for r in db.query(
+        "MATCH (n:Phone {case_id: $case_id}) RETURN n.number AS v ORDER BY v", {"case_id": case_id})]
+    orgs = [r["v"] for r in db.query(
+        "MATCH (n:Organization {case_id: $case_id}) RETURN n.name AS v ORDER BY v", {"case_id": case_id})]
+    return {
+        "people": people,
+        "locations": locations,
+        "vehicles": vehicles,
+        "phones": phones,
+        "organizations": orgs,
+        "is_processed": bool(people or locations or vehicles or phones or orgs),
+    }
+
+
+def get_all_entities():
+    """Every case's entities, grouped by case, for the 'All cases' toggle on
+    the Entities tab. BUILD.md step 1 — no cross-case link detection here,
+    just each case's own entities laid side by side."""
+    cases = db.query(
+        "MATCH (c:Case) RETURN c.id AS id, c.name AS name, c.created_at AS created_at "
+        "ORDER BY c.created_at DESC"
+    )
+    grouped = []
+    totals = {"people": 0, "locations": 0, "vehicles": 0, "phones": 0, "organizations": 0}
+    for c in cases:
+        entry = get_entities_for_case(c["id"])
+        for key in totals:
+            totals[key] += len(entry[key])
+        grouped.append({"case_id": c["id"], "case_name": c["name"], **entry})
+    return {"cases": grouped, "totals": totals}
+
+
 def get_entity_detail(case_id, label, node_id):
     """Node's own data plus every relationship touching it, either direction.
     Read-only — this is all the node-click popup on the graph shows."""
