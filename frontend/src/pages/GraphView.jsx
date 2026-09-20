@@ -218,6 +218,10 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
     })
   }
 
+  function handleChanged() {
+    onGraphChanged?.()
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center gap-3 mb-3 flex-shrink-0">
@@ -270,18 +274,12 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
         )}
       </div>
 
-      {error && (
-        <div className="flex-shrink-0 bg-danger/10 text-danger border border-danger/30 rounded-lg p-3 mb-3 text-sm font-mono">
-          {error}
-        </div>
+      {empty && !error && (
+        <p className="absolute inset-0 flex items-center justify-center text-light-muted dark:text-muted font-mono text-sm px-4 text-center">
+          Canvas empty. Run ingestion in the Ingestion tab first.
+        </p>
       )}
-
       <div className="relative flex-1 min-h-0 rounded-lg overflow-hidden bg-light-bg dark:bg-bg border border-light-border dark:border-border">
-        {empty && !error && (
-          <p className="absolute inset-0 flex items-center justify-center text-light-muted dark:text-muted font-mono text-sm px-4 text-center">
-            Canvas empty. Run ingestion in the Ingestion tab first.
-          </p>
-        )}
         <div id="graph-canvas" ref={containerRef} className="w-full h-full" />
         {selected && (
           <NodeDetailsPanel
@@ -296,7 +294,7 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
 
       {editOpen && (
         <GraphEditPanel
-          caseId={currentCaseId}
+          caseId={isAllCases ? null : selectedCaseId}
           allCasesMode={isAllCases}
           onClose={() => setEditOpen(false)}
           onChanged={handleChanged}
