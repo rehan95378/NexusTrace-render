@@ -54,7 +54,7 @@ export default function KeyPlayers({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -81,7 +81,7 @@ export default function KeyPlayers({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -91,7 +91,7 @@ export default function KeyPlayers({ refreshKey }) {
           </option>
         ))}
       </select>
-      <p className="text-muted text-center py-8">{mode === 'this-case' && !selectedCaseId
+      <p className="text-light-muted dark:text-muted text-center py-8">{mode === 'this-case' && !selectedCaseId
         ? 'Select a case to view key player analysis.'
         : 'Loading…'}
       </p>
@@ -111,7 +111,7 @@ export default function KeyPlayers({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -122,9 +122,9 @@ export default function KeyPlayers({ refreshKey }) {
         ))}
       </select>
       {data && data.message ? (
-        <p className="text-muted text-center py-8">{data.message}</p>
+        <p className="text-light-muted dark:text-muted text-center py-8">{data.message}</p>
       ) : (
-        <p className="text-muted text-center py-8">No key players detected.</p>
+        <p className="text-light-muted dark:text-muted text-center py-8">No key players detected.</p>
       )}
     </Panel>
   )
@@ -147,7 +147,7 @@ export default function KeyPlayers({ refreshKey }) {
               setSelectedCaseId(e.target.value)
             }
           }}
-          className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg"
         >
           <option value="">Select a case…</option>
           <option value="__all__">All cases</option>
@@ -171,13 +171,13 @@ export default function KeyPlayers({ refreshKey }) {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="flex items-center justify-between px-4 py-3 bg-panel-raised/50 border border-border/50 rounded-lg hover:bg-panel-raised/70 transition-colors"
+              className="flex items-center justify-between px-4 py-3 bg-light-panel-raised dark:bg-light-panel dark:bg-panel-raised/50 border border-light-border dark:border-border/50 rounded-lg hover:bg-light-panel-raised dark:bg-light-panel dark:bg-panel-raised/70 transition-colors"
             >
-              <span className="flex items-center gap-2 text-sm font-medium text-text">
-                <span className="text-muted/60">#{index + 1}</span>
+              <span className="flex items-center gap-2 text-sm font-medium text-light-text dark:text-text">
+                <span className="text-light-muted dark:text-muted/60">#{index + 1}</span>
                 <span className="font-semibold">{row.name}</span>
               </span>
-              <span className="text-xs font-mono flex items-center gap-2 text-muted">
+              <span className="text-xs font-mono flex items-center gap-2 text-light-muted dark:text-muted">
                 <span>PageRank {row.pagerank.toFixed(4)}</span>
                 <span>·</span>
                 <span>Betweenness {row.betweenness.toFixed(4)}</span>
@@ -186,7 +186,7 @@ export default function KeyPlayers({ refreshKey }) {
           ))}
         </motion.div>
       ) : (
-        <p className="text-muted text-center py-8">No key players detected.</p>
+        <p className="text-light-muted dark:text-muted text-center py-8">No key players detected.</p>
       )}
     </Panel>
   )

@@ -215,26 +215,26 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
       onClick={onClose}
     >
       <motion.div
-        className="w-full max-w-xl max-h-[85vh] flex flex-col bg-panel border border-border rounded-lg shadow-xl overflow-hidden"
+        className="w-full max-w-xl max-h-[85vh] flex flex-col bg-light-panel dark:bg-panel border border-light-border dark:border-border rounded-lg shadow-xl overflow-hidden"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="font-display text-lg font-semibold text-text">Edit graph</h2>
-          <button className="text-muted hover:text-text transition-colors duration-200" onClick={onClose}>×</button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-light-border dark:border-border">
+          <h2 className="font-display text-lg font-semibold text-light-text dark:text-text">Edit graph</h2>
+          <button className="text-light-muted dark:text-muted hover:text-light-text dark:text-text transition-colors duration-200" onClick={onClose}>×</button>
         </div>
 
-        <div className="flex flex-wrap gap-2 px-5 pt-2 border-b border-border">
+        <div className="flex flex-wrap gap-2 px-5 pt-2 border-b border-light-border dark:border-border">
           {TABS.map((t) => (
             <button
               key={t.key}
               className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors duration-200
                 ${tab === t.key
-                  ? 'bg-panel-raised border-accent text-accent'
-                  : 'bg-panel border-border text-muted hover:text-text hover:border-border/50'}`}
+                  ? 'bg-light-panel dark:bg-panel-raised border-accent text-accent'
+                  : 'bg-light-panel dark:bg-panel border-light-border dark:border-border text-light-muted dark:text-muted hover:text-light-text dark:text-text hover:border-light-border dark:border-border/50'}`}
               onClick={() => { setTab(t.key); setStatus(null) }}
             >
               {t.label}
@@ -286,7 +286,7 @@ function NodeSelect({ options, value, onChange }) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+      className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
     >
       <option value="">Select a node…</option>
       {options.map((o) => (
@@ -304,7 +304,7 @@ function CreateNodeForm({ caseId, allCasesMode, onDone, guard }) {
 
   if (allCasesMode) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center text-muted">
+      <div className="flex flex-col items-center justify-center py-12 text-center text-light-muted dark:text-muted">
         <p>Node creation is only available in single-case mode.</p>
         <p className="mt-1">Switch to "This case" to create new entities.</p>
       </div>
@@ -322,23 +322,23 @@ function CreateNodeForm({ caseId, allCasesMode, onDone, guard }) {
       })
     }}>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Node type</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Node type</label>
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         >
           {NODE_TYPES.map((nt) => <option key={nt.type} value={nt.type}>{nt.label}</option>)}
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Value</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Value</label>
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="e.g. Ramesh Yadav"
           required
-          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text placeholder:text-light-muted dark:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         />
       </div>
       <button
@@ -386,22 +386,22 @@ function CreateRelForm({ caseId, allCasesMode, nodeOptions, suggestions, onDone,
       })
     }}>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">From node</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">From node</label>
         <NodeSelect options={nodeOptions} value={source} onChange={setSource} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">To node</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">To node</label>
         <NodeSelect options={nodeOptions} value={target} onChange={setTarget} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Relationship name</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Relationship name</label>
         <input
           value={relType}
           onChange={(e) => setRelType(e.target.value)}
           placeholder="e.g. Business Partner, Connected To"
           list="rel-type-suggestions"
           required
-          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text placeholder:text-light-muted dark:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         />
         <datalist id="rel-type-suggestions">
           {suggestions.map((s) => <option key={s} value={s} />)}
@@ -445,16 +445,16 @@ function RenameNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
       })
     }}>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Node</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Node</label>
         <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">New name</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">New name</label>
         <input
           value={newValue}
           onChange={(e) => setNewValue(e.target.value)}
           required
-          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text placeholder:text-light-muted dark:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         />
       </div>
       <button
@@ -500,23 +500,23 @@ function RenameRelForm({ caseId, edgeOptions, onDone, guard }) {
       })
     }}>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Relationship</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Relationship</label>
         <select
           value={edgeKey}
           onChange={(e) => setEdgeKey(e.target.value)}
-          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         >
           <option value="">Select a relationship…</option>
           {edgeOptions.map((e, i) => <option key={i} value={i}>{e.display}</option>)}
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">New name</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">New name</label>
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           required
-          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text placeholder:text-light-muted dark:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         />
       </div>
       <button
@@ -566,11 +566,11 @@ function MergeNodesForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
       })
     }}>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Keep this node</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Keep this node</label>
         <NodeSelect options={nodeOptions} value={keep} onChange={setKeep} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Merge this node into it (same type — it's deleted after merging)</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Merge this node into it (same type — it's deleted after merging)</label>
         <NodeSelect
           options={nodeOptions.filter((o) => !keepType || o.type === keepType)}
           value={merge}
@@ -609,7 +609,7 @@ function DeleteNodeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
       })
     }}>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Node</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Node</label>
         <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
       </div>
       <button
@@ -654,11 +654,11 @@ function DeleteRelForm({ caseId, edgeOptions, onDone, guard }) {
       })
     }}>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Relationship</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Relationship</label>
         <select
           value={edgeKey}
           onChange={(e) => setEdgeKey(e.target.value)}
-          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         >
           <option value="">Select a relationship…</option>
           {edgeOptions.map((e, i) => <option key={i} value={i}>{e.display}</option>)}
@@ -700,16 +700,16 @@ function ChangeTypeForm({ caseId, allCasesMode, nodeOptions, onDone, guard }) {
       })
     }}>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">Node</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">Node</label>
         <NodeSelect options={nodeOptions} value={node} onChange={setNode} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-muted mb-1">New type</label>
+        <label className="block text-sm font-medium text-light-muted dark:text-muted mb-1">New type</label>
         <select
           value={newType}
           onChange={(e) => setNewType(e.target.value)}
           disabled={!node}
-          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg disabled:opacity-50"
+          className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg disabled:opacity-50"
         >
           <option value="">Select new type…</option>
           {NODE_TYPES.map((nt) => (

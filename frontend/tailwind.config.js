@@ -8,17 +8,39 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Custom dark theme (matching existing CSS variables)
+        // Light mode (default)
+        'light-bg': '#F8FAFC',
+        'light-panel': '#FFFFFF',
+        'light-panel-raised': '#F1F5F9',
+        'light-border': '#CBD5E1',
+        'light-text': '#1F2937',
+        'light-muted': '#64748B',
+
+        // Dark mode (secondary)
+        'dark-bg': '#0f1416',
+        'dark-panel': '#161d20',
+        'dark-panel-raised': '#1c2528',
+        'dark-border': '#2a3538',
+        'dark-text': '#e7ece9',
+        'dark-muted': '#8fa0a3',
+
+        // Semantic colors (both modes)
+        accent: '#0D9488',
+        'dark-accent': '#2fa8a0',
+        teal: '#0D9488',
+        danger: '#DC2626',
+        warning: '#D97706',
+        success: '#16A34A',
+        info: '#0284C7',
+
+        // Deprecated (for backwards compatibility during transition)
         bg: '#0f1416',
         panel: '#161d20',
         'panel-raised': '#1c2528',
         border: '#2a3538',
         text: '#e7ece9',
         muted: '#8fa0a3',
-        accent: '#e3a008',
         'accent-dim': '#6b5220',
-        teal: '#2fa8a0',
-        danger: '#c1443c',
         'danger-dim': '#4a2320',
         'accent-content': '#14100a',
       },

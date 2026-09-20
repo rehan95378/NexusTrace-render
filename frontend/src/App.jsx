@@ -58,11 +58,11 @@ function BrandRow({ onToggle }) {
       <button
         onClick={onToggle}
         aria-label="Toggle sidebar"
-        className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150"
+        className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1 rounded-md text-light-muted dark:text-muted hover:text-light-text dark:hover:text-text hover:bg-light-panel-raised dark:hover:bg-panel-raised transition-colors duration-150"
       >
         <SidebarPanelIcon className="w-4 h-4" />
       </button>
-      <h1 className="font-display text-text text-lg font-semibold truncate">NexusTrace</h1>
+      <h1 className="font-display text-light-text dark:text-text text-lg font-semibold truncate">NexusTrace</h1>
     </div>
   )
 }
@@ -74,7 +74,7 @@ export default function App() {
   const [health, setHealth] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(true)
+  const [isDarkMode, setIsDarkMode] = useState(false) // Light mode is default
   const isMobile = useIsMobile()
   const sidebarVisible = isMobile ? sidebarOpen : !sidebarCollapsed
 
@@ -119,7 +119,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell h-screen overflow-hidden flex flex-col bg-bg text-text">
+    <div className="app-shell h-screen overflow-hidden flex flex-col bg-light-bg dark:bg-bg text-light-text dark:text-text">
       {sidebarOpen && isMobile && (
         <motion.div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
@@ -138,12 +138,12 @@ export default function App() {
           no fixed positioning, so nothing else on the page needs special
           padding to avoid it. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-panel border-r border-border flex flex-col
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-light-panel dark:bg-panel border-r border-light-border dark:border-border flex flex-col
                    transition-transform duration-300 ease-out
                    ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 pl-3 pr-4 py-3 border-b border-border">
+          <div className="flex-shrink-0 pl-3 pr-4 py-3 border-b border-light-border dark:border-border">
             <BrandRow onToggle={toggleSidebar} />
           </div>
 
@@ -153,8 +153,8 @@ export default function App() {
                 key={t.key}
                 className={`flex w-full items-center px-4 py-3 text-left text-sm font-medium
                           ${tab === t.key
-                            ? 'bg-panel-raised text-accent border-l-4 border-accent'
-                            : 'text-muted hover:bg-panel/50 hover:text-text transition-colors duration-200'}`}
+                            ? 'bg-light-panel-raised dark:bg-panel-raised text-accent dark:text-accent border-l-4 border-accent'
+                            : 'text-light-muted dark:text-muted hover:bg-light-panel-raised/50 dark:hover:bg-panel/50 hover:text-light-text dark:hover:text-text transition-colors duration-200'}`}
                 onClick={() => selectTab(t.key)}
               >
                 {t.label}
@@ -162,7 +162,7 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="flex-shrink-0 pt-4 pb-6 border-t border-border">
+          <div className="flex-shrink-0 pt-4 pb-6 border-t border-light-border dark:border-border">
             <div className="flex items-center px-4">
               <span className="flex items-center gap-2 text-xs font-mono">
                 {health ? (
@@ -214,23 +214,23 @@ export default function App() {
             (when needed) is squeezed into GraphView's existing controls
             row below instead, so the canvas loses no vertical space. */}
         {tab !== 'graph' && (
-          <div className="topbar flex-shrink-0 flex items-center gap-3 py-3 px-4 border-b border-border/60">
+          <div className="topbar flex-shrink-0 flex items-center gap-3 py-3 px-4 border-b border-light-border/60 dark:border-border/60 bg-light-panel dark:bg-panel">
             {!sidebarVisible && (
               <button
                 onClick={toggleSidebar}
                 aria-label="Show sidebar"
-                className="flex-shrink-0 flex items-center justify-center w-8 h-8 -ml-1 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150"
+                className="flex-shrink-0 flex items-center justify-center w-8 h-8 -ml-1 rounded-md text-light-muted dark:text-muted hover:text-light-text dark:hover:text-text hover:bg-light-panel-raised dark:hover:bg-panel-raised transition-colors duration-150"
               >
                 <SidebarPanelIcon className="w-4 h-4" />
               </button>
             )}
 
-            <h1 className="font-display text-2xl font-bold text-text md:text-3xl flex-1 min-w-0 truncate">
+            <h1 className="font-display text-2xl font-bold text-light-text dark:text-text md:text-3xl flex-1 min-w-0 truncate">
               {activeTab.title}
             </h1>
 
             {!isMobile && (
-              <span className="hidden md:flex items-center gap-2 text-xs font-mono text-muted flex-shrink-0">
+              <span className="hidden md:flex items-center gap-2 text-xs font-mono text-light-muted dark:text-muted flex-shrink-0">
                 {isDarkMode ? 'Dark Mode' : 'Light Mode'}
               </span>
             )}
@@ -240,8 +240,8 @@ export default function App() {
         <div
           className={
             tab === 'graph'
-              ? 'flex-1 min-h-0 flex flex-col p-3 md:p-4'
-              : 'flex-1 min-h-0 overflow-y-auto'
+              ? 'flex-1 min-h-0 flex flex-col p-3 md:p-4 bg-light-bg dark:bg-bg'
+              : 'flex-1 min-h-0 overflow-y-auto bg-light-bg dark:bg-bg'
           }
         >
           {tab === 'cases' && <Cases onNavigateToIngestion={() => selectTab('ingestion')} />}

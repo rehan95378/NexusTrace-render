@@ -20,7 +20,7 @@ export default function AuditTrail({ refreshKey }) {
   const renderLoading = () => (
     <Panel title="">
       <motion.p
-        className="text-muted text-center py-8"
+        className="text-light-muted dark:text-muted text-center py-8"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
@@ -43,7 +43,7 @@ export default function AuditTrail({ refreshKey }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="text-sm font-medium text-muted mb-2">Hash Chain Verification (per case):</div>
+              <div className="text-sm font-medium text-light-muted dark:text-muted mb-2">Hash Chain Verification (per case):</div>
               <div className="space-y-2 text-xs font-mono">
                 {Object.entries(data.verification).map(([caseId, status], idx) => (
                   <motion.div
@@ -76,7 +76,7 @@ export default function AuditTrail({ refreshKey }) {
           {data.entries.length === 0 && (
             <motion.p
               key="empty"
-              className="text-muted text-center py-8"
+              className="text-light-muted dark:text-muted text-center py-8"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
@@ -88,7 +88,7 @@ export default function AuditTrail({ refreshKey }) {
             {data.entries.map((entry, idx) => (
               <motion.details
                 key={`${entry.case_id}-${entry.seq}-${idx}`}
-                className="audit-entry bg-panel-raised/50 border border-border/50 rounded-lg overflow-hidden"
+                className="audit-entry bg-light-panel-raised dark:bg-light-panel dark:bg-panel-raised/50 border border-light-border dark:border-border/50 rounded-lg overflow-hidden"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.03 }}
@@ -96,18 +96,18 @@ export default function AuditTrail({ refreshKey }) {
                 <motion.summary
                   className="flex items-center gap-2 p-3 cursor-pointer select-none"
                 >
-                  <span className="flex-shrink-0 text-xs font-mono text-muted">
+                  <span className="flex-shrink-0 text-xs font-mono text-light-muted dark:text-muted">
                     [{entry.case_id}]
                   </span>
-                  <span className="flex-shrink-0 text-xs font-mono text-muted">
+                  <span className="flex-shrink-0 text-xs font-mono text-light-muted dark:text-muted">
                     {entry.timestamp}
                   </span>
-                  <span className="flex-1 text-sm font-medium text-text action">
+                  <span className="flex-1 text-sm font-medium text-light-text dark:text-text action">
                     {entry.action}
                   </span>
                 </motion.summary>
                 <motion.div
-                  className="p-3 bg-bg text-xs font-mono text-text overflow-auto max-h-[200px]"
+                  className="p-3 bg-light-bg dark:bg-bg text-xs font-mono text-light-text dark:text-text overflow-auto max-h-[200px]"
                 >
                   <pre>{JSON.stringify(entry, null, 2)}</pre>
                 </motion.div>

@@ -97,7 +97,7 @@ export default function Anomalies({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -112,8 +112,8 @@ export default function Anomalies({ refreshKey }) {
 
   const EmptyState = ({ message, Icon = SearchIcon }) => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <Icon className="w-8 h-8 text-muted/50 mb-3" />
-      <p className="text-muted text-sm">{message}</p>
+      <Icon className="w-8 h-8 text-light-muted dark:text-muted/50 mb-3" />
+      <p className="text-light-muted dark:text-muted text-sm">{message}</p>
     </div>
   )
 
@@ -201,7 +201,7 @@ export default function Anomalies({ refreshKey }) {
               <AlertRow key={row.name} type="info">
                 <div className="flex-1">
                   <div className="font-medium text-blue-300">{row.name}</div>
-                  <div className="text-xs font-mono text-muted">{row.degree} connections (network average: {row.network_average})</div>
+                  <div className="text-xs font-mono text-light-muted dark:text-muted">{row.degree} connections (network average: {row.network_average})</div>
                 </div>
               </AlertRow>
             ))}

@@ -85,14 +85,14 @@ export default function Ingestion({ onIngested }) {
         hint="Add FIR reports and call/transaction records for a case — entities and relationships are extracted and added to the case graph automatically."
       >
         <div className="mb-4">
-          <label htmlFor="case-select" className="block text-sm font-medium text-muted mb-1">
+          <label htmlFor="case-select" className="block text-sm font-medium text-light-muted dark:text-muted mb-1">
             Case
           </label>
           <select
             id="case-select"
             value={selectedCaseId}
             onChange={(e) => setSelectedCaseId(e.target.value)}
-            className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+            className="block w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text placeholder:text-light-muted dark:placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg"
           >
             <option value="">Select a case…</option>
             {cases.map((c) => (
@@ -105,26 +105,26 @@ export default function Ingestion({ onIngested }) {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label htmlFor="fir" className="block text-sm font-medium text-muted mb-1">
+            <label htmlFor="fir" className="block text-sm font-medium text-light-muted dark:text-muted mb-1">
               FIR / Field Report
             </label>
             <textarea
               id="fir"
               rows={4}
-              className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none"
+              className="block w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text placeholder:text-light-muted dark:placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg h-[120px] resize-none"
               placeholder="Paste FIR or field report text…"
               value={firText}
               onChange={(e) => setFirText(e.target.value)}
             />
           </div>
           <div>
-            <label htmlFor="cdr" className="block text-sm font-medium text-muted mb-1">
+            <label htmlFor="cdr" className="block text-sm font-medium text-light-muted dark:text-muted mb-1">
               Call Records / Transaction Log
             </label>
             <textarea
               id="cdr"
               rows={4}
-              className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none"
+              className="block w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text placeholder:text-light-muted dark:placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg h-[120px] resize-none"
               placeholder="Paste CDR, call log, or ledger text…"
               value={cdrText}
               onChange={(e) => setCdrText(e.target.value)}
@@ -132,12 +132,12 @@ export default function Ingestion({ onIngested }) {
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-muted">
+        <label className="flex items-center gap-2 text-sm text-light-muted dark:text-muted">
           <input
             type="checkbox"
             checked={appendMode}
             onChange={(e) => setAppendMode(e.target.checked)}
-            className="h-4 w-4 text-accent bg-bg border border-border rounded focus:ring-accent"
+            className="h-4 w-4 text-accent bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded focus:ring-accent"
           />
           Add to this case's existing graph, instead of replacing it
         </label>
@@ -146,14 +146,14 @@ export default function Ingestion({ onIngested }) {
           <button
             onClick={runIngestion}
             disabled={status?.kind === 'busy'}
-            className="flex-1 px-4 py-2 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
+            className="flex-1 px-4 py-2 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg text-sm"
           >
             Run extraction
           </button>
           <button
             onClick={clearCase}
             disabled={status?.kind === 'busy'}
-            className="flex-1 px-4 py-2 border border-danger text-danger rounded-lg hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg text-sm"
+            className="flex-1 px-4 py-2 border border-danger text-danger rounded-lg hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg text-sm"
           >
             Clear this case
           </button>

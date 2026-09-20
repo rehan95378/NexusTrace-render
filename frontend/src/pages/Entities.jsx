@@ -174,7 +174,7 @@ export default function Entities({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -201,7 +201,7 @@ export default function Entities({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -211,7 +211,7 @@ export default function Entities({ refreshKey }) {
           </option>
         ))}
       </select>
-      <p className="text-muted text-center py-8">{isAllCases ? 'Loading…' : 'Select a case to view its entity profiles.'}</p>
+      <p className="text-light-muted dark:text-muted text-center py-8">{isAllCases ? 'Loading…' : 'Select a case to view its entity profiles.'}</p>
     </Panel>
   )
 
@@ -228,7 +228,7 @@ export default function Entities({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -238,7 +238,7 @@ export default function Entities({ refreshKey }) {
           </option>
         ))}
       </select>
-      <p className="text-muted text-center py-8">This case is empty. Run extraction on the Ingestion tab first.</p>
+      <p className="text-light-muted dark:text-muted text-center py-8">This case is empty. Run extraction on the Ingestion tab first.</p>
     </Panel>
   )
 
@@ -260,7 +260,7 @@ export default function Entities({ refreshKey }) {
               setSelectedCaseId(e.target.value)
             }
           }}
-          className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+          className="block w-full sm:w-[250px] px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg"
         >
           <option value="">Select a case…</option>
           <option value="__all__">All cases</option>
@@ -281,14 +281,14 @@ export default function Entities({ refreshKey }) {
           {!Array.isArray(data) ? (
             <p className="text-danger text-center py-8">Error: Invalid data format (expected array)</p>
           ) : data.length === 0 ? (
-            <p className="text-muted text-center py-8">No entities extracted yet across any cases. Run ingestion first.</p>
+            <p className="text-light-muted dark:text-muted text-center py-8">No entities extracted yet across any cases. Run ingestion first.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-muted font-normal border-b border-border">
-                  <th className="pb-3 font-medium text-text">Type</th>
-                  <th className="pb-3 font-medium text-text">Value</th>
-                  <th className="pb-3 font-medium text-text">Case</th>
+                <tr className="text-left text-light-muted dark:text-muted font-normal border-b border-light-border dark:border-border">
+                  <th className="pb-3 font-medium text-light-text dark:text-text">Type</th>
+                  <th className="pb-3 font-medium text-light-text dark:text-text">Value</th>
+                  <th className="pb-3 font-medium text-light-text dark:text-text">Case</th>
                 </tr>
               </thead>
               <tbody>
@@ -300,15 +300,15 @@ export default function Entities({ refreshKey }) {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.02 }}
-                      className="border-b border-border/50 hover:bg-panel-raised/50 transition-colors"
+                      className="border-b border-light-border dark:border-border/50 hover:bg-light-panel-raised dark:bg-light-panel dark:bg-panel-raised/50 transition-colors"
                     >
                       <td className="py-3">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium ${c.bg} ${c.text} ${c.border}`}>
                           {entity.type}
                         </span>
                       </td>
-                      <td className="py-3 text-text">{entity.value}</td>
-                      <td className="py-3 text-muted font-mono">{entity.case_name || entity.case_id}</td>
+                      <td className="py-3 text-light-text dark:text-text">{entity.value}</td>
+                      <td className="py-3 text-light-muted dark:text-muted font-mono">{entity.case_name || entity.case_id}</td>
                     </motion.tr>
                   )
                 })}
@@ -329,17 +329,17 @@ export default function Entities({ refreshKey }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: typeIndex * 0.08 }}
             >
-              <div className="bg-panel-raised/50 border border-border/50 rounded-lg p-4 h-full">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted mb-3">
+              <div className="bg-light-panel-raised dark:bg-light-panel dark:bg-panel-raised/50 border border-light-border dark:border-border/50 rounded-lg p-4 h-full">
+                <div className="flex items-center gap-2 text-sm font-medium text-light-muted dark:text-muted mb-3">
                   <type.Icon className={`w-4 h-4 ${COLOR_CLASSES[type.color].text}`} />
-                  <span className="text-text">{type.label}</span>
-                  <span className="ml-auto px-2 py-0.5 bg-bg rounded text-xs font-mono text-muted">
+                  <span className="text-light-text dark:text-text">{type.label}</span>
+                  <span className="ml-auto px-2 py-0.5 bg-light-bg dark:bg-bg rounded text-xs font-mono text-light-muted dark:text-muted">
                     {data[type.key]?.length || 0}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 min-h-[80px]">
                   {(!data[type.key] || data[type.key].length === 0) && (
-                    <span className="text-xs text-muted/60 italic w-full">No records extracted for this case yet.</span>
+                    <span className="text-xs text-light-muted dark:text-muted/60 italic w-full">No records extracted for this case yet.</span>
                   )}
                   {data[type.key]?.map((item, itemIndex) => (
                     <motion.span
