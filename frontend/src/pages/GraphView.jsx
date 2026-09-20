@@ -246,7 +246,7 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
         </select>
 
         <button
-          className="px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg text-sm"
+          className="px-4 py-2 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg text-sm"
           onClick={() => setEditOpen(true)}
         >
           Edit graph
