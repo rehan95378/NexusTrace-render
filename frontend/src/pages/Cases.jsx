@@ -47,7 +47,7 @@ export default function Cases({ onNavigateToIngestion }) {
   return (
     <div className="space-y-6">
       <Panel
-        title="Case Management"
+        title=""
         hint="Create new cases or manage existing ones."
       >
         {error && (

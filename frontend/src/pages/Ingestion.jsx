@@ -81,7 +81,7 @@ export default function Ingestion({ onIngested }) {
   return (
     <>
       <Panel
-        title="Multi-Channel Ingestion"
+        title=""
         hint="Add FIR reports and call/transaction records for a case — entities and relationships are extracted and added to the case graph automatically."
       >
         <div className="mb-4">
