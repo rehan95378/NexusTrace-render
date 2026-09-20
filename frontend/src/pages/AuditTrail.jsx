@@ -45,12 +45,17 @@ export default function AuditTrail({ refreshKey }) {
             >
               <div className="text-sm font-medium text-muted mb-2">Hash Chain Verification (per case):</div>
               <div className="space-y-2 text-xs font-mono">
-                {Object.entries(data.verification).map(([caseId, status]) => (
+                {Object.entries(data.verification).map(([caseId, status], idx) => (
                   <motion.div
                     key={caseId}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: Math.random() * 0.1 }}
+                    // Fixed: was `Math.random() * 0.1`, which recomputes to a
+                    // new value on every re-render, so the "animation" delay
+                    // was nondeterministic instead of a one-time staggered
+                    // entrance. Deterministic, index-based delay instead —
+                    // matches the pattern already used for entries below.
+                    transition={{ delay: idx * 0.03 }}
                     className="flex items-center justify-between p-2 rounded-lg "
                   >
                     <span>

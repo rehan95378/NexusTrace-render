@@ -19,6 +19,26 @@ const TABS = [
   { key: 'audit', label: 'Audit Trail', title: 'Tamper-Evident Audit Log' },
 ]
 
+// Tracks window width in state via a resize listener, instead of reading
+// window.innerWidth directly during render (which only ever reflects
+// whatever width happened to be current the last time some *other* state
+// change caused a re-render).
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  )
+
+  useEffect(() => {
+    function onResize() {
+      setIsMobile(window.innerWidth < breakpoint)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [breakpoint])
+
+  return isMobile
+}
+
 export default function App() {
   const [tab, setTab] = useState('cases')
   const [refreshKey, setRefreshKey] = useState(0)
@@ -26,26 +46,32 @@ export default function App() {
   const [health, setHealth] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(true)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'unreachable' }))
   }, [])
+
+  // Apply the initial theme class on mount (previously the `dark` class was
+  // only ever toggled inside the click handler, so the default isDarkMode
+  // state never actually got reflected on <html> until the user clicked
+  // the toggle once).
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode)
+  }, [isDarkMode])
 
   const bumpRefresh = () => setRefreshKey((k) => k + 1)
   const activeTab = TABS.find((t) => t.key === tab)
 
   function selectTab(key) {
     setTab(key)
-    // Close sidebar on mobile when a tab is selected
-    if (window.innerWidth < 640) {
+    if (isMobile) {
       setSidebarOpen(false)
     }
   }
 
-  const isGraphTab = tab === 'graph'
-
   return (
-    <div className="app-shell min-h-screen flex flex-col bg-background text-text">
+    <div className="app-shell min-h-screen flex flex-col bg-bg text-text">
       {/* Mobile Menu Button (hidden on desktop) */}
       <button
         className="md:hidden p-2 bg-panel-raised border-border rounded-lg hover:bg-panel/80 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent"
@@ -65,7 +91,7 @@ export default function App() {
       </button>
 
       {/* Sidebar Overlay (mobile only) */}
-      {sidebarOpen && window.innerWidth < 640 && (
+      {sidebarOpen && isMobile && (
         <motion.div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
@@ -76,14 +102,16 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar Navigation */}
+      {/* Sidebar Navigation — always fixed to the left edge. Previously this
+          only got `fixed` positioning while the mobile drawer was open;
+          on desktop it was a normal block sitting in the page's flow, so
+          under the outer flex-col wrapper, <main> was actually rendering
+          BELOW the sidebar's full height instead of beside it — which is
+          the large empty gap you were seeing above every tab's content. */}
       <aside
-        className={`w-64 bg-panel border-r border-border flex flex-col
-                   ${sidebarOpen && window.innerWidth < 640
-                     ? 'fixed inset-y-0 left-0 z-50 transform translate-x-0 transition-transform duration-300 ease-out'
-                     : window.innerWidth < 640
-                       ? '-translate-x-full'
-                       : ''}`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-panel border-r border-border flex flex-col
+                   transition-transform duration-300 ease-out
+                   ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}`}
       >
         <div className="flex flex-col h-full">
           <div className="flex-shrink-0 p-4 border-b border-border">
@@ -117,13 +145,14 @@ export default function App() {
                       </span>
                     ) : (
                       <>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5
-                                  ${health.status === 'ok' ? 'bg-teal/20 text-teal' : 'bg-danger/20 text-danger'} rounded">
+                        {/* Fixed: these were plain strings before (no
+                            backticks), so `${...}` never interpolated and
+                            the conditional color classes never applied. */}
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${health.status === 'ok' ? 'bg-teal/20 text-teal' : 'bg-danger/20 text-danger'} rounded`}>
                           ● Backend {health.status}
                         </span>
                         {'neo4j_connected' in health && (
-                          <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5
-                                        ${health.neo4j_connected ? 'bg-teal/20 text-teal' : 'bg-danger/20 text-danger'} rounded text-xs">
+                          <span className={`ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 ${health.neo4j_connected ? 'bg-teal/20 text-teal' : 'bg-danger/20 text-danger'} rounded text-xs`}>
                             Neo4j {health.neo4j_connected ? 'Up' : 'Down'}
                           </span>
                         )}
@@ -140,10 +169,7 @@ export default function App() {
               {/* Theme Toggle */}
               <button
                 className="ml-auto p-1 rounded hover:bg-panel/50 transition-colors duration-200"
-                onClick={() => {
-                  setIsDarkMode(!isDarkMode)
-                  document.documentElement.classList.toggle('dark')
-                }}
+                onClick={() => setIsDarkMode((d) => !d)}
                 aria-label="Toggle dark/light mode"
               >
                 {isDarkMode ? '☀️' : '🌙'}
@@ -156,7 +182,7 @@ export default function App() {
       {/* Main Content */}
       <main
         className={`flex-1 min-w-0
-                   ${window.innerWidth < 640
+                   ${isMobile
                      ? sidebarOpen
                        ? 'pl-64'
                        : 'pl-0'
@@ -168,7 +194,7 @@ export default function App() {
           </h1>
 
           {/* Theme label (desktop only) */}
-          {window.innerWidth >= 640 && (
+          {!isMobile && (
             <span className="hidden md:flex items-center gap-2 text-xs font-mono text-muted">
               {isDarkMode ? 'Dark Mode' : 'Light Mode'}
             </span>
