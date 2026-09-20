@@ -33,7 +33,12 @@ function parseSingleCaseNodeId(nodeId, viewedCaseId) {
   }
 }
 
-export default function GraphView({ refreshKey, onGraphChanged }) {
+// sidebarToggle: optional node (the app-level "show sidebar" icon button),
+// passed in from App.jsx and rendered as the first item in the controls
+// row below — this is deliberately NOT a separate header bar of its own,
+// so collapsing the sidebar never costs the graph canvas any vertical
+// space, whichever case is selected.
+export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle }) {
   const containerRef = useRef(null)
   const networkRef = useRef(null)
   const [mode, setMode] = useState('this-case')
@@ -244,6 +249,8 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-wrap items-center gap-3 mb-3 flex-shrink-0">
+        {sidebarToggle}
+
         <select
           value={isAllCases ? '__all__' : selectedCaseId}
           onChange={(e) => {

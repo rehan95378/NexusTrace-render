@@ -69,7 +69,7 @@ export default function KeyPlayers({ refreshKey }) {
   )
 
   const renderLoading = () => (
-    <Panel title="Key Player Identification" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
+    <Panel title="" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
       <select
         value={isAllCases ? '__all__' : selectedCaseId}
         onChange={(e) => {
@@ -99,7 +99,7 @@ export default function KeyPlayers({ refreshKey }) {
   )
 
   const renderNoData = () => (
-    <Panel title="Key Player Identification" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
+    <Panel title="" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
       <select
         value={isAllCases ? '__all__' : selectedCaseId}
         onChange={(e) => {
@@ -134,7 +134,7 @@ export default function KeyPlayers({ refreshKey }) {
   if (data && data.message && !data.ranked) return renderNoData()
 
   return (
-    <Panel title="Key Player Identification" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
+    <Panel title="" hint={isAllCases ? "PageRank and betweenness across all cases — surfaces cross-case bridges." : "Computed via PageRank and betweenness centrality on the selected case's graph."}>
       <div className="mb-4">
         <select
           value={isAllCases ? '__all__' : selectedCaseId}

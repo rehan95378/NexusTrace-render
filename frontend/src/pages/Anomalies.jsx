@@ -78,8 +78,14 @@ export default function Anomalies({ refreshKey }) {
 
   const isAllCases = mode === 'all-cases'
 
+  // Rendered once, directly under the page title and above every Panel
+  // below — not nested inside the first panel's card — since it applies
+  // to all three sections (cycles, high-connectivity, bridges) at once.
+  // Uses the same horizontal inset as Panel's own p-5/md:p-6 padding so
+  // it lines up with the panel headings below it instead of sitting
+  // flush against the screen edge.
   const CaseSelector = () => (
-    <div className="mb-4">
+    <div className="px-5 md:px-6 mb-4">
       <select
         value={isAllCases ? '__all__' : selectedCaseId}
         onChange={(e) => {
@@ -131,32 +137,39 @@ export default function Anomalies({ refreshKey }) {
   )
 
   if (error) return (
-    <Panel title="Suspicious Pattern Detection">
+    <>
       <CaseSelector />
-      <AlertRow type="error">{error}</AlertRow>
-    </Panel>
+      <Panel title="Suspicious Pattern Detection">
+        <AlertRow type="error">{error}</AlertRow>
+      </Panel>
+    </>
   )
 
   if (!data) return (
-    <Panel title="Suspicious Pattern Detection" hint={isAllCases ? "Anomaly detection across all cases." : "Anomaly detection for the selected case."}>
+    <>
       <CaseSelector />
-      <EmptyState message={mode === 'this-case' && !selectedCaseId
-        ? 'Select a case to run anomaly detection.'
-        : 'Loading…'} />
-    </Panel>
+      <Panel title="Suspicious Pattern Detection" hint={isAllCases ? "Anomaly detection across all cases." : "Anomaly detection for the selected case."}>
+        <EmptyState message={mode === 'this-case' && !selectedCaseId
+          ? 'Select a case to run anomaly detection.'
+          : 'Loading…'} />
+      </Panel>
+    </>
   )
 
   if (data.message) return (
-    <Panel title="Suspicious Pattern Detection" hint={isAllCases ? "Anomaly detection across all cases." : "Anomaly detection for the selected case."}>
+    <>
       <CaseSelector />
-      <EmptyState message={data.message} />
-    </Panel>
+      <Panel title="Suspicious Pattern Detection" hint={isAllCases ? "Anomaly detection across all cases." : "Anomaly detection for the selected case."}>
+        <EmptyState message={data.message} />
+      </Panel>
+    </>
   )
 
   return (
     <>
+      <CaseSelector />
+
       <Panel title="Financial Transaction Cycles" hint="Circular money-trail patterns detected in the case graph.">
-        <CaseSelector />
         {data.cycles.length === 0 ? (
           <EmptyState message="No circular transaction trails detected in the current data." Icon={LoopIcon} />
         ) : (
