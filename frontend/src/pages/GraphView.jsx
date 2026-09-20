@@ -8,6 +8,32 @@ import { api } from '../api'
 
 const LAST_CASE_KEY = 'sih_last_graph_case_id'
 
+// Single-case mode node ids come in two shapes from GET /cases/{case_id}/graph:
+//   "Type:id"              — a node that belongs to the case being viewed
+//   "case_id:Type:id"      — a cross-case neighbor node the endpoint pulls
+//                            in so its edge has somewhere to point
+// The previous version always split on the *first* colon, so a cross-case
+// id like "9a1c...:Person:Rohan Sharma" got parsed as
+// type = "9a1c..." and id = "Person:Rohan Sharma" — garbage — and always
+// assumed nodeCaseId === the currently selected case, which is wrong for
+// the foreign node. This mirrors the case-aware parsing GraphEditPanel.jsx
+// already uses for its edge options.
+function parseSingleCaseNodeId(nodeId, viewedCaseId) {
+  const parts = nodeId.split(':')
+  if (parts.length >= 3) {
+    // Cross-case node: case_id:Type:id (id itself may contain colons, so
+    // rejoin everything after the first two segments)
+    const [nodeCaseId, type, ...rest] = parts
+    return { type, id: rest.join(':'), nodeCaseId }
+  }
+  const sep = nodeId.indexOf(':')
+  return {
+    type: nodeId.slice(0, sep),
+    id: nodeId.slice(sep + 1),
+    nodeCaseId: viewedCaseId,
+  }
+}
+
 export default function GraphView({ refreshKey, onGraphChanged }) {
   const containerRef = useRef(null)
   const networkRef = useRef(null)
@@ -33,6 +59,19 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
       }
     })
   }, [])
+
+  // Keep the case list (and therefore visibleCaseIds) fresh after
+  // ingestion/clear/edits, not just on first mount.
+  useEffect(() => {
+    api.listCases().then((list) => {
+      setCases(list)
+      setVisibleCaseIds((prev) => {
+        const next = new Set(prev)
+        list.forEach((c) => next.add(c.id))
+        return next
+      })
+    }).catch(() => {})
+  }, [refreshKey])
 
   useEffect(() => {
     if (selectedCaseId) {
@@ -146,8 +185,10 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
         }
         const nodeId = params.nodes[0]
 
-        // For all-cases mode, nodeId format is "case_id:Type:actual_id"
-        // For this-case mode, nodeId format is "Type:actual_id"
+        // For all-cases mode, nodeId format is always "case_id:Type:actual_id".
+        // For this-case mode, nodeId is usually "Type:actual_id" but can
+        // also be a cross-case neighbor in "case_id:Type:actual_id" form —
+        // parseSingleCaseNodeId handles both shapes correctly.
         let type, id, nodeCaseId
         if (isAllCases) {
           const parts = nodeId.split(':')
@@ -155,10 +196,7 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
           type = parts[1]
           id = parts.slice(2).join(':')
         } else {
-          const sep = nodeId.indexOf(':')
-          type = nodeId.slice(0, sep)
-          id = nodeId.slice(sep + 1)
-          nodeCaseId = selectedCaseId
+          ;({ type, id, nodeCaseId } = parseSingleCaseNodeId(nodeId, selectedCaseId))
         }
 
         const canvasPos = network.getPositions([nodeId])[nodeId]

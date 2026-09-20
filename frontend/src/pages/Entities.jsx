@@ -11,12 +11,33 @@ const ENTITY_TYPES = [
   { key: 'organizations', label: 'Organizations', color: 'green', icon: '🏢' },
 ]
 
+// NOTE: hover classes are listed here as full, static literal strings
+// (e.g. 'hover:bg-accent/20') rather than built at runtime with
+// `hover:${...}`. Tailwind's JIT scanner only picks up class names that
+// appear literally in source — a template-built `hover:${var}` never
+// generates any CSS, which is why the previous version's chip hover effect
+// silently did nothing.
 const COLOR_CLASSES = {
-  accent: { bg: 'bg-accent/10', text: 'text-accent', border: 'border-accent/30' },
-  teal: { bg: 'bg-teal/10', text: 'text-teal', border: 'border-teal/30' },
-  blue: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
-  purple: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/30' },
-  green: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/30' },
+  accent: {
+    bg: 'bg-accent/10', text: 'text-accent', border: 'border-accent/30',
+    hoverBg: 'hover:bg-accent/20', hoverBorder: 'hover:border-accent/50',
+  },
+  teal: {
+    bg: 'bg-teal/10', text: 'text-teal', border: 'border-teal/30',
+    hoverBg: 'hover:bg-teal/20', hoverBorder: 'hover:border-teal/50',
+  },
+  blue: {
+    bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30',
+    hoverBg: 'hover:bg-blue-500/20', hoverBorder: 'hover:border-blue-500/50',
+  },
+  purple: {
+    bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/30',
+    hoverBg: 'hover:bg-purple-500/20', hoverBorder: 'hover:border-purple-500/50',
+  },
+  green: {
+    bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/30',
+    hoverBg: 'hover:bg-green-500/20', hoverBorder: 'hover:border-green-500/50',
+  },
 }
 
 const LAST_CASE_KEY = 'sih_last_entities_case_id'
@@ -39,6 +60,14 @@ export default function Entities({ refreshKey }) {
       }
     })
   }, [])
+
+  // Re-fetch the case list (entity counts etc.) whenever something upstream
+  // (ingestion, clear, graph edit) bumps refreshKey — previously this list
+  // was only ever fetched once on mount, so counts went stale after any
+  // ingest/clear until the tab was revisited.
+  useEffect(() => {
+    api.listCases().then(setCases).catch(() => {})
+  }, [refreshKey])
 
   useEffect(() => {
     if (selectedCaseId) {
@@ -79,6 +108,11 @@ export default function Entities({ refreshKey }) {
   }, [mode, selectedCaseId, refreshKey])
 
   const isAllCases = mode === 'all-cases'
+
+  function typeColorClasses(entityType) {
+    const match = ENTITY_TYPES.find((c) => c.key === entityType + 's')
+    return COLOR_CLASSES[match?.color || 'accent']
+  }
 
   const renderError = () => (
     <Panel title="Extracted Entity Profiles">
@@ -211,23 +245,26 @@ export default function Entities({ refreshKey }) {
                 </tr>
               </thead>
               <tbody>
-                {data.map((entity, idx) => (
-                  <motion.tr
-                    key={`${entity.case_id}-${entity.type}-${entity.value}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.02 }}
-                    className="border-b border-border/50 hover:bg-panel-raised/50 transition-colors"
-                  >
-                    <td className="py-3">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium ${COLOR_CLASSES[COLUMNS.find(c => c.key === entity.type + 's')?.color || 'accent'].bg} ${COLOR_CLASSES[COLUMNS.find(c => c.key === entity.type + 's')?.color || 'accent'].text} ${COLOR_CLASSES[COLUMNS.find(c => c.key === entity.type + 's')?.color || 'accent'].border}`}>
-                        {entity.type}
-                      </span>
-                    </td>
-                    <td className="py-3 text-text">{entity.value}</td>
-                    <td className="py-3 text-muted font-mono">{entity.case_name || entity.case_id}</td>
-                  </motion.tr>
-                ))}
+                {data.map((entity, idx) => {
+                  const c = typeColorClasses(entity.type)
+                  return (
+                    <motion.tr
+                      key={`${entity.case_id}-${entity.type}-${entity.value}`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.02 }}
+                      className="border-b border-border/50 hover:bg-panel-raised/50 transition-colors"
+                    >
+                      <td className="py-3">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium ${c.bg} ${c.text} ${c.border}`}>
+                          {entity.type}
+                        </span>
+                      </td>
+                      <td className="py-3 text-text">{entity.value}</td>
+                      <td className="py-3 text-muted font-mono">{entity.case_name || entity.case_id}</td>
+                    </motion.tr>
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -263,7 +300,7 @@ export default function Entities({ refreshKey }) {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: itemIndex * 0.03 }}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium ${COLOR_CLASSES[type.color].bg} ${COLOR_CLASSES[type.color].text} ${COLOR_CLASSES[type.color].border} hover:${COLOR_CLASSES[type.color].bg} hover:${COLOR_CLASSES[type.color].border} transition-colors cursor-default`}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium ${COLOR_CLASSES[type.color].bg} ${COLOR_CLASSES[type.color].text} ${COLOR_CLASSES[type.color].border} ${COLOR_CLASSES[type.color].hoverBg} ${COLOR_CLASSES[type.color].hoverBorder} transition-colors cursor-default`}
                     >
                       {item}
                     </motion.span>

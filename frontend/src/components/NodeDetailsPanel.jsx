@@ -29,8 +29,17 @@ export default function NodeDetailsPanel({ caseId, type, id, position, onClose }
   }
 
   return (
-    <div className="fixed z-20 w-[280px] max-h-[420px] overflow-y-auto bg-panel-raised border border-border border-l-3 border-accent rounded-lg p-4 shadow-lg
-                   left-[calc({position.x}px+18px)] top-[calc({position.y}px)] transform-gpu">
+    <div
+      className="fixed z-20 w-[280px] max-h-[420px] overflow-y-auto bg-panel-raised border border-border border-l-3 border-accent rounded-lg p-4 shadow-lg transform-gpu"
+      // Fixed: previously these were Tailwind arbitrary-value classes built
+      // with plain strings (no backticks), e.g. `left-[calc({position.x}px+18px)]`,
+      // so `{position.x}` was never interpolated — it rendered as literal,
+      // invalid CSS that the browser ignored, and the popup never actually
+      // moved to the clicked node. Even with backticks fixed, Tailwind's
+      // static JIT scanner can't pick up class names assembled at runtime
+      // from JS values, so this has to be a real inline style instead.
+      style={{ left: position.x, top: position.y }}
+    >
       <div className="flex items-center justify-between mb-2">
         <span className="font-mono text-xs text-muted text-uppercase tracking-wider">{type}</span>
         <button className="text-muted hover:text-text transition-colors duration-200" onClick={onClose}>×</button>
