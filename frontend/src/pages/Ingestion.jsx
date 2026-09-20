@@ -79,20 +79,20 @@ export default function Ingestion({ onIngested }) {
   }
 
   return (
-    <>
+    <div className="p-5 md:p-6">
       <Panel
-        title="Multi-Channel Ingestion"
-        hint="Add FIR reports and call/transaction records for a case — entities and relationships are extracted and added to the case graph automatically."
+        title="Add Evidence"
+        hint="Upload FIR reports and call/transaction records — entities and relationships are extracted and added to the case graph automatically."
       >
         <div className="mb-4">
-          <label htmlFor="case-select" className="block text-sm font-medium text-muted mb-1">
+          <label htmlFor="case-select" className="block text-sm font-medium text-muted mb-2 dark:text-dark-muted">
             Case
           </label>
           <select
             id="case-select"
             value={selectedCaseId}
             onChange={(e) => setSelectedCaseId(e.target.value)}
-            className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+            className="block w-full px-3 py-2 bg-panel border border-border-light rounded-md text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:placeholder:text-dark-muted dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
           >
             <option value="">Select a case…</option>
             {cases.map((c) => (
@@ -103,28 +103,28 @@ export default function Ingestion({ onIngested }) {
           </select>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 mb-4">
           <div>
-            <label htmlFor="fir" className="block text-sm font-medium text-muted mb-1">
+            <label htmlFor="fir" className="block text-sm font-medium text-muted mb-2 dark:text-dark-muted">
               FIR / Field Report
             </label>
             <textarea
               id="fir"
               rows={4}
-              className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none"
+              className="block w-full px-3 py-2 bg-panel border border-border-light rounded-md text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:placeholder:text-dark-muted dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
               placeholder="Paste FIR or field report text…"
               value={firText}
               onChange={(e) => setFirText(e.target.value)}
             />
           </div>
           <div>
-            <label htmlFor="cdr" className="block text-sm font-medium text-muted mb-1">
+            <label htmlFor="cdr" className="block text-sm font-medium text-muted mb-2 dark:text-dark-muted">
               Call Records / Transaction Log
             </label>
             <textarea
               id="cdr"
               rows={4}
-              className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none"
+              className="block w-full px-3 py-2 bg-panel border border-border-light rounded-md text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:placeholder:text-dark-muted dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
               placeholder="Paste CDR, call log, or ledger text…"
               value={cdrText}
               onChange={(e) => setCdrText(e.target.value)}
@@ -132,28 +132,28 @@ export default function Ingestion({ onIngested }) {
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-muted">
+        <label className="flex items-center gap-2 text-sm text-muted mb-4 dark:text-dark-muted">
           <input
             type="checkbox"
             checked={appendMode}
             onChange={(e) => setAppendMode(e.target.checked)}
-            className="h-4 w-4 text-accent bg-bg border border-border rounded focus:ring-accent"
+            className="h-4 w-4 text-accent bg-panel border border-border-light rounded focus:ring-accent dark:bg-dark-panel dark:border-dark-border dark:text-dark-accent dark:focus:ring-dark-accent"
           />
           Add to this case's existing graph, instead of replacing it
         </label>
 
-        <div className="flex flex-col sm:flex-row gap-3 mt-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={runIngestion}
             disabled={status?.kind === 'busy'}
-            className="flex-1 px-4 py-2 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
+            className="flex-1 px-4 py-2 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm dark:bg-dark-accent dark:text-dark-text dark:hover:bg-dark-accent/90 dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
           >
             Run extraction
           </button>
           <button
             onClick={clearCase}
             disabled={status?.kind === 'busy'}
-            className="flex-1 px-4 py-2 border border-danger text-danger rounded-lg hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg text-sm"
+            className="flex-1 px-4 py-2 border border-danger text-danger rounded-md hover:bg-danger-dim disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg text-sm dark:border-dark-danger dark:text-dark-danger dark:hover:bg-dark-danger/20 dark:focus:ring-dark-danger dark:focus:ring-offset-dark-bg"
           >
             Clear this case
           </button>
@@ -161,7 +161,7 @@ export default function Ingestion({ onIngested }) {
 
         {status && (
           <motion.div
-            className={`mt-4 px-4 py-2 rounded-lg text-sm ${status.kind === 'error' ? 'bg-danger/10 text-danger border border-danger/30' : 'bg-teal/10 text-teal border border-teal/30'}`}
+            className={`mt-4 px-4 py-3 rounded-md text-sm ${status.kind === 'error' ? 'bg-danger-dim text-danger border border-danger dark:bg-dark-danger/20 dark:text-dark-danger dark:border-dark-danger' : 'bg-success-dim text-success border border-success dark:bg-dark-teal/20 dark:text-dark-teal dark:border-dark-teal'}`}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
@@ -170,6 +170,6 @@ export default function Ingestion({ onIngested }) {
           </motion.div>
         )}
       </Panel>
-    </>
+    </div>
   )
 }
