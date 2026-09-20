@@ -8,6 +8,7 @@ import GraphView from './pages/GraphView'
 import KeyPlayers from './pages/KeyPlayers'
 import Anomalies from './pages/Anomalies'
 import AuditTrail from './pages/AuditTrail'
+import KeyboardShortcuts from './components/KeyboardShortcuts'
 import { motion } from 'framer-motion'
 
 const TABS = [
@@ -66,6 +67,7 @@ export default function App() {
   const [resetKey, setResetKey] = useState(0)
   const [health, setHealth] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const { isDarkMode, toggleDarkMode, sidebarCollapsed, setSidebarCollapsed } = useUIStore()
   const isMobile = useIsMobile()
   const sidebarVisible = isMobile ? sidebarOpen : !sidebarCollapsed
@@ -85,10 +87,14 @@ export default function App() {
         e.preventDefault()
         toggleSidebar()
       }
+      if (key === '?' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setShowHelp(!showHelp)
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isMobile])
+  }, [isMobile, showHelp])
 
   const bumpRefresh = () => setRefreshKey((k) => k + 1)
   const activeTab = TABS.find((t) => t.key === tab)
@@ -110,6 +116,7 @@ export default function App() {
 
   return (
     <div className="app-shell h-screen overflow-hidden flex flex-col bg-light-bg dark:bg-bg text-light-text dark:text-text">
+      <KeyboardShortcuts isOpen={showHelp} onClose={() => setShowHelp(false)} />
       {sidebarOpen && isMobile && (
         <motion.div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
