@@ -18,7 +18,7 @@ export default function AuditTrail({ refreshKey }) {
   )
 
   const renderLoading = () => (
-    <Panel title="Tamper-Evident Audit Log">
+    <Panel title="">
       <motion.p
         className="text-muted text-center py-8"
         initial={{ opacity: 0 }}
@@ -34,7 +34,7 @@ export default function AuditTrail({ refreshKey }) {
       {error && renderError()}
       {!error && !data && renderLoading()}
       {data && (
-        <Panel title="Tamper-Evident Audit Log">
+        <Panel>
           {/* Per-case verification status */}
           {data.verification && Object.keys(data.verification).length > 0 && (
             <motion.div

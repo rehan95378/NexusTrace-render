@@ -162,7 +162,7 @@ export default function Entities({ refreshKey }) {
   }
 
   const renderError = () => (
-    <Panel title="Extracted Entity Profiles">
+    <Panel title="">
       <select
         value={isAllCases ? '__all__' : selectedCaseId}
         onChange={(e) => {
@@ -189,7 +189,7 @@ export default function Entities({ refreshKey }) {
   )
 
   const renderLoading = () => (
-    <Panel title="Extracted Entity Profiles" hint={isAllCases ? "Entities across all cases." : "Entities in the selected case's graph."}>
+    <Panel title="" hint={isAllCases ? "Entities across all cases." : "Entities in the selected case's graph."}>
       <select
         value={isAllCases ? '__all__' : selectedCaseId}
         onChange={(e) => {
@@ -216,7 +216,7 @@ export default function Entities({ refreshKey }) {
   )
 
   const renderEmptyCase = () => (
-    <Panel title="Extracted Entity Profiles" hint={isAllCases ? "Entities across all cases." : "Entities in the selected case's graph."}>
+    <Panel title="" hint={isAllCases ? "Entities across all cases." : "Entities in the selected case's graph."}>
       <select
         value={isAllCases ? '__all__' : selectedCaseId}
         onChange={(e) => {
@@ -247,7 +247,7 @@ export default function Entities({ refreshKey }) {
   if (mode === 'this-case' && !data.is_processed) return renderEmptyCase()
 
   return (
-    <Panel title="Extracted Entity Profiles" hint={isAllCases ? "Entities across all cases." : "Entities in the selected case's graph."}>
+    <Panel title="" hint={isAllCases ? "Entities across all cases." : "Entities in the selected case's graph."}>
       <div className="mb-4">
         <select
           value={isAllCases ? '__all__' : selectedCaseId}

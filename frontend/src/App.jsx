@@ -35,6 +35,38 @@ function useIsMobile(breakpoint = 640) {
   return isMobile
 }
 
+function SidebarPanelIcon(props) {
+  // A simple "sidebar" glyph: outer rect + a vertical divider near the
+  // left edge, mirroring the icon Claude's own collapse button uses.
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.75" />
+      <path d="M6 2.75v10.5" />
+    </svg>
+  )
+}
+
+/**
+ * Icon + wordmark shown together only inside the sidebar's own header,
+ * while the sidebar is open. When the sidebar is closed, only the bare
+ * toggle icon is shown (in the main content's header row, below) — no
+ * wordmark — matching Claude's own collapsed-sidebar look.
+ */
+function BrandRow({ onToggle }) {
+  return (
+    <div className="flex items-center gap-2 flex-shrink-0">
+      <button
+        onClick={onToggle}
+        aria-label="Toggle sidebar"
+        className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150"
+      >
+        <SidebarPanelIcon className="w-4 h-4" />
+      </button>
+      <h1 className="font-display text-text text-lg font-semibold truncate">NexusTrace</h1>
+    </div>
+  )
+}
+
 export default function App() {
   const [tab, setTab] = useState('cases')
   const [refreshKey, setRefreshKey] = useState(0)
@@ -53,6 +85,20 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
+
+  // Ctrl+B / Cmd+B toggles the sidebar from anywhere, same as Claude's own UI.
+  useEffect(() => {
+    function onKeyDown(e) {
+      const key = e.key?.toLowerCase()
+      if (key === 'b' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        toggleSidebar()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile])
 
   const bumpRefresh = () => setRefreshKey((k) => k + 1)
   const activeTab = TABS.find((t) => t.key === tab)
@@ -85,19 +131,20 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar Navigation — toggleable at every screen size via the
-          single button below. On mobile it's an overlay drawer; on
-          desktop it's a collapsible column that frees up the full page
-          width when hidden. */}
+      {/* Sidebar Navigation — toggleable at every screen size. On mobile
+          it's an overlay drawer; on desktop it's a collapsible column
+          that frees up the full page width when hidden. Its header row
+          holds the toggle button and wordmark as ordinary flex content —
+          no fixed positioning, so nothing else on the page needs special
+          padding to avoid it. */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-panel border-r border-border flex flex-col
                    transition-transform duration-300 ease-out
                    ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 p-4 border-b border-border">
-            <div className="text-sm font-mono text-muted tracking-wide">SIH26189</div>
-            <h1 className="font-display text-text text-lg mt-1 truncate">Evidence Graph System</h1>
+          <div className="flex-shrink-0 pl-3 pr-4 py-3 border-b border-border">
+            <BrandRow onToggle={toggleSidebar} />
           </div>
 
           <nav className="flex-1 overflow-y-auto pt-2">
@@ -156,38 +203,28 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Single sidebar toggle — one button, one DOM node, for both open
-          and closed states. It's a sibling of <aside> and <main> (fixed to
-          the viewport), so it's never affected by main's pl-64/pl-0
-          padding transition below. Its own `left` offset animates with the
-          SAME duration/easing as the sidebar's own transform, so it
-          visibly rides along the sidebar's edge instead of instantly
-          snapping to a new spot when the state flips. */}
-      <button
-        onClick={toggleSidebar}
-        aria-label={sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}
-        className={`fixed top-4 z-[70] p-2 bg-panel-raised border border-border rounded-lg text-muted hover:text-text hover:bg-panel shadow-lg transition-[left] duration-300 ease-out ${
-          sidebarVisible ? 'left-[228px]' : 'left-4'
-        }`}
-      >
-        <svg
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          className={`w-4 h-4 transition-transform duration-300 ${sidebarVisible ? 'rotate-180' : ''}`}
-        >
-          <path d="M6 3l4.5 5-4.5 5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-
       {/* Main Content */}
       <main
         className={`flex-1 min-w-0 h-full flex flex-col overflow-hidden transition-[padding] duration-300 ease-out
                    ${!isMobile && sidebarVisible ? 'pl-64' : 'pl-0'}`}
       >
+        {/* Only non-graph tabs get this header row (title + toggle icon
+            when the sidebar is closed). The graph tab has no title and
+            deliberately gets zero extra header bar — its own toggle icon
+            (when needed) is squeezed into GraphView's existing controls
+            row below instead, so the canvas loses no vertical space. */}
         {tab !== 'graph' && (
-          <div className="topbar flex-shrink-0 flex items-center gap-3 md:gap-4 md:p-4 px-4 py-3 border-b border-border/60">
+          <div className="topbar flex-shrink-0 flex items-center gap-3 py-3 px-4 border-b border-border/60">
+            {!sidebarVisible && (
+              <button
+                onClick={toggleSidebar}
+                aria-label="Show sidebar"
+                className="flex-shrink-0 flex items-center justify-center w-8 h-8 -ml-1 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150"
+              >
+                <SidebarPanelIcon className="w-4 h-4" />
+              </button>
+            )}
+
             <h1 className="font-display text-2xl font-bold text-text md:text-3xl flex-1 min-w-0 truncate">
               {activeTab.title}
             </h1>
@@ -200,14 +237,34 @@ export default function App() {
           </div>
         )}
 
-        <div className={tab === 'graph' ? 'flex-1 min-h-0 flex flex-col p-3 md:p-4' : 'flex-1 min-h-0 overflow-y-auto'}>
+        <div
+          className={
+            tab === 'graph'
+              ? 'flex-1 min-h-0 flex flex-col p-3 md:p-4'
+              : 'flex-1 min-h-0 overflow-y-auto'
+          }
+        >
           {tab === 'cases' && <Cases onNavigateToIngestion={() => selectTab('ingestion')} />}
           {tab === 'ingestion' && (
             <Ingestion key={resetKey} onIngested={bumpRefresh} />
           )}
           {tab === 'entities' && <Entities refreshKey={refreshKey} />}
           {tab === 'graph' && (
-            <GraphView refreshKey={refreshKey} onGraphChanged={bumpRefresh} />
+            <GraphView
+              refreshKey={refreshKey}
+              onGraphChanged={bumpRefresh}
+              sidebarToggle={
+                !sidebarVisible && (
+                  <button
+                    onClick={toggleSidebar}
+                    aria-label="Show sidebar"
+                    className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150"
+                  >
+                    <SidebarPanelIcon className="w-4 h-4" />
+                  </button>
+                )
+              }
+            />
           )}
           {tab === 'key-players' && <KeyPlayers refreshKey={refreshKey} />}
           {tab === 'anomalies' && <Anomalies refreshKey={refreshKey} />}
