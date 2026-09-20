@@ -3,6 +3,8 @@
  * Ensures the app looks great on all screen sizes.
  */
 
+import React from 'react'
+
 /**
  * Hook to detect if we're on a mobile device (breakpoint: sm = 640px).
  * Already exists in App.jsx, but exported here for use in other components.
