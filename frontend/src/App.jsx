@@ -10,13 +10,13 @@ import AuditTrail from './pages/AuditTrail'
 import { motion } from 'framer-motion'
 
 const TABS = [
-  { key: 'cases', label: 'Case Directory', title: 'Case Directory' },
-  { key: 'ingestion', label: 'Evidence Processing', title: 'Evidence Processing' },
-  { key: 'entities', label: 'Suspect Dossiers', title: 'Suspect Dossiers' },
-  { key: 'graph', label: 'Relational Link Matrix', title: 'Relational Link Matrix' },
-  { key: 'key-players', label: 'Network Centrality', title: 'Network Centrality' },
-  { key: 'anomalies', label: 'Suspicious Pattern Alerts', title: 'Suspicious Pattern Alerts' },
-  { key: 'audit', label: 'Compliance & Session Logs', title: 'Compliance & Session Logs' },
+  { key: 'cases', label: 'Cases', title: 'Case Management' },
+  { key: 'ingestion', label: 'Data Ingestion', title: 'Multi-Channel Ingestion' },
+  { key: 'entities', label: 'Entity Profiles', title: 'Extracted Entity Profiles' },
+  { key: 'graph', label: 'Evidence Graph Map', title: 'Evidence Graph Map' },
+  { key: 'key-players', label: 'Key Player ID', title: 'Key Player Identification' },
+  { key: 'anomalies', label: 'Anomaly Detection', title: 'Suspicious Pattern Detection' },
+  { key: 'audit', label: 'Audit Trail', title: 'Tamper-Evident Audit Log' },
 ]
 
 function useIsMobile(breakpoint = 640) {
@@ -58,11 +58,11 @@ function BrandRow({ onToggle }) {
       <button
         onClick={onToggle}
         aria-label="Toggle sidebar"
-        className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150 dark:text-dark-muted dark:hover:text-dark-text dark:hover:bg-dark-panel-raised"
+        className="flex-shrink-0 flex items-center justify-center w-7 h-7 -ml-1 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150"
       >
         <SidebarPanelIcon className="w-4 h-4" />
       </button>
-      <h1 className="font-display text-text text-lg font-semibold truncate dark:text-dark-text">NexusTrace</h1>
+      <h1 className="font-display text-text text-lg font-semibold truncate">NexusTrace</h1>
     </div>
   )
 }
@@ -74,7 +74,7 @@ export default function App() {
   const [health, setHealth] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(true)
   const isMobile = useIsMobile()
   const sidebarVisible = isMobile ? sidebarOpen : !sidebarCollapsed
 
@@ -119,7 +119,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell h-screen overflow-hidden flex flex-col bg-bg text-text dark:bg-dark-bg dark:text-dark-text">
+    <div className="app-shell h-screen overflow-hidden flex flex-col bg-bg text-text">
       {sidebarOpen && isMobile && (
         <motion.div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
@@ -138,13 +138,12 @@ export default function App() {
           no fixed positioning, so nothing else on the page needs special
           padding to avoid it. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-panel border-r border-border-light flex flex-col
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-panel border-r border-border flex flex-col
                    transition-transform duration-300 ease-out
-                   dark:bg-dark-panel dark:border-dark-border
                    ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 pl-3 pr-4 py-3 border-b border-border-light dark:border-dark-border">
+          <div className="flex-shrink-0 pl-3 pr-4 py-3 border-b border-border">
             <BrandRow onToggle={toggleSidebar} />
           </div>
 
@@ -154,8 +153,8 @@ export default function App() {
                 key={t.key}
                 className={`flex w-full items-center px-4 py-3 text-left text-sm font-medium
                           ${tab === t.key
-                            ? 'bg-accent/10 text-accent border-l-4 border-accent dark:bg-dark-accent/20 dark:text-dark-accent dark:border-dark-accent'
-                            : 'text-muted hover:bg-panel-raised hover:text-text transition-colors duration-200 dark:text-dark-muted dark:hover:bg-dark-panel-raised dark:hover:text-dark-text'}`}
+                            ? 'bg-panel-raised text-accent border-l-4 border-accent'
+                            : 'text-muted hover:bg-panel/50 hover:text-text transition-colors duration-200'}`}
                 onClick={() => selectTab(t.key)}
               >
                 {t.label}
@@ -163,22 +162,22 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="flex-shrink-0 pt-4 pb-6 border-t border-border-light dark:border-dark-border">
-            <div className="flex items-center px-4 gap-2">
-              <span className="flex items-center gap-2 text-xs font-mono flex-1">
+          <div className="flex-shrink-0 pt-4 pb-6 border-t border-border">
+            <div className="flex items-center px-4">
+              <span className="flex items-center gap-2 text-xs font-mono">
                 {health ? (
                   <>
                     {health.status === 'unreachable' ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-danger-dim text-danger rounded text-xs dark:bg-dark-danger/20 dark:text-dark-danger">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-danger/20 text-danger rounded">
                         ● Backend Unreachable
                       </span>
                     ) : (
                       <>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${health.status === 'ok' ? 'bg-success-dim text-success dark:bg-dark-teal/20 dark:text-dark-teal' : 'bg-danger-dim text-danger dark:bg-dark-danger/20 dark:text-dark-danger'}`}>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${health.status === 'ok' ? 'bg-teal/20 text-teal' : 'bg-danger/20 text-danger'} rounded`}>
                           ● Backend {health.status}
                         </span>
                         {'neo4j_connected' in health && (
-                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${health.neo4j_connected ? 'bg-success-dim text-success dark:bg-dark-teal/20 dark:text-dark-teal' : 'bg-danger-dim text-danger dark:bg-dark-danger/20 dark:text-dark-danger'}`}>
+                          <span className={`ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 ${health.neo4j_connected ? 'bg-teal/20 text-teal' : 'bg-danger/20 text-danger'} rounded text-xs`}>
                             Neo4j {health.neo4j_connected ? 'Up' : 'Down'}
                           </span>
                         )}
@@ -186,17 +185,16 @@ export default function App() {
                     )}
                   </>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted/20 text-muted rounded text-xs dark:bg-dark-muted/20 dark:text-dark-muted">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted/20 text-muted rounded">
                     ● Checking...
                   </span>
                 )}
               </span>
 
               <button
-                className="p-1 rounded hover:bg-accent/10 transition-colors duration-200 dark:hover:bg-dark-accent/10 flex-shrink-0"
+                className="ml-auto p-1 rounded hover:bg-panel/50 transition-colors duration-200"
                 onClick={() => setIsDarkMode((d) => !d)}
                 aria-label="Toggle dark/light mode"
-                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
               >
                 {isDarkMode ? '☀️' : '🌙'}
               </button>
@@ -216,23 +214,23 @@ export default function App() {
             (when needed) is squeezed into GraphView's existing controls
             row below instead, so the canvas loses no vertical space. */}
         {tab !== 'graph' && (
-          <div className="topbar flex-shrink-0 flex items-center gap-3 py-3 px-4 border-b border-border-light dark:border-dark-border bg-panel dark:bg-dark-panel">
+          <div className="topbar flex-shrink-0 flex items-center gap-3 py-3 px-4 border-b border-border/60">
             {!sidebarVisible && (
               <button
                 onClick={toggleSidebar}
                 aria-label="Show sidebar"
-                className="flex-shrink-0 flex items-center justify-center w-8 h-8 -ml-1 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150 dark:text-dark-muted dark:hover:text-dark-text dark:hover:bg-dark-panel-raised"
+                className="flex-shrink-0 flex items-center justify-center w-8 h-8 -ml-1 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150"
               >
                 <SidebarPanelIcon className="w-4 h-4" />
               </button>
             )}
 
-            <h1 className="font-display text-2xl font-bold text-text md:text-3xl flex-1 min-w-0 truncate dark:text-dark-text">
+            <h1 className="font-display text-2xl font-bold text-text md:text-3xl flex-1 min-w-0 truncate">
               {activeTab.title}
             </h1>
 
             {!isMobile && (
-              <span className="hidden md:flex items-center gap-2 text-xs font-mono text-muted dark:text-dark-muted flex-shrink-0">
+              <span className="hidden md:flex items-center gap-2 text-xs font-mono text-muted flex-shrink-0">
                 {isDarkMode ? 'Dark Mode' : 'Light Mode'}
               </span>
             )}

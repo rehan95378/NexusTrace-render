@@ -66,24 +66,24 @@ const ENTITY_TYPES = [
 // silently did nothing.
 const COLOR_CLASSES = {
   accent: {
-    bg: 'bg-accent/10 dark:bg-dark-accent/20', text: 'text-accent dark:text-dark-accent', border: 'border-accent/30 dark:border-dark-accent/30',
-    hoverBg: 'hover:bg-accent/20 dark:hover:bg-dark-accent/30', hoverBorder: 'hover:border-accent/50 dark:hover:border-dark-accent/50',
+    bg: 'bg-accent/10', text: 'text-accent', border: 'border-accent/30',
+    hoverBg: 'hover:bg-accent/20', hoverBorder: 'hover:border-accent/50',
   },
   teal: {
-    bg: 'bg-teal/10 dark:bg-dark-teal/20', text: 'text-teal dark:text-dark-teal', border: 'border-teal/30 dark:border-dark-teal/30',
-    hoverBg: 'hover:bg-teal/20 dark:hover:bg-dark-teal/30', hoverBorder: 'hover:border-teal/50 dark:hover:border-dark-teal/50',
+    bg: 'bg-teal/10', text: 'text-teal', border: 'border-teal/30',
+    hoverBg: 'hover:bg-teal/20', hoverBorder: 'hover:border-teal/50',
   },
   blue: {
-    bg: 'bg-blue-500/10 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/30 dark:border-blue-500/30',
-    hoverBg: 'hover:bg-blue-500/20 dark:hover:bg-blue-900/30', hoverBorder: 'hover:border-blue-500/50 dark:hover:border-blue-500/50',
+    bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30',
+    hoverBg: 'hover:bg-blue-500/20', hoverBorder: 'hover:border-blue-500/50',
   },
   purple: {
-    bg: 'bg-purple-500/10 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/30 dark:border-purple-500/30',
-    hoverBg: 'hover:bg-purple-500/20 dark:hover:bg-purple-900/30', hoverBorder: 'hover:border-purple-500/50 dark:hover:border-purple-500/50',
+    bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/30',
+    hoverBg: 'hover:bg-purple-500/20', hoverBorder: 'hover:border-purple-500/50',
   },
   green: {
-    bg: 'bg-green-500/10 dark:bg-green-900/20', text: 'text-green-600 dark:text-green-400', border: 'border-green-500/30 dark:border-green-500/30',
-    hoverBg: 'hover:bg-green-500/20 dark:hover:bg-green-900/30', hoverBorder: 'hover:border-green-500/50 dark:hover:border-green-500/50',
+    bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/30',
+    hoverBg: 'hover:bg-green-500/20', hoverBorder: 'hover:border-green-500/50',
   },
 }
 
@@ -174,7 +174,7 @@ export default function Entities({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-panel border border-border-light rounded-md text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4 dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -184,7 +184,7 @@ export default function Entities({ refreshKey }) {
           </option>
         ))}
       </select>
-      <div className="p-3 bg-danger-dim border border-danger rounded-md text-danger text-sm dark:bg-dark-danger/20 dark:border-dark-danger dark:text-dark-danger">{error}</div>
+      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error}</div>
     </Panel>
   )
 
@@ -201,7 +201,7 @@ export default function Entities({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-panel border border-border-light rounded-md text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4 dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -211,7 +211,7 @@ export default function Entities({ refreshKey }) {
           </option>
         ))}
       </select>
-      <p className="text-muted text-center py-8 dark:text-dark-muted">{isAllCases ? 'Loading…' : 'Select a case to view its entity profiles.'}</p>
+      <p className="text-muted text-center py-8">{isAllCases ? 'Loading…' : 'Select a case to view its entity profiles.'}</p>
     </Panel>
   )
 
@@ -228,7 +228,7 @@ export default function Entities({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-panel border border-border-light rounded-md text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4 dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg mb-4"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -238,7 +238,7 @@ export default function Entities({ refreshKey }) {
           </option>
         ))}
       </select>
-      <p className="text-muted text-center py-8 dark:text-dark-muted">This case is empty. Run extraction on the Evidence Processing tab first.</p>
+      <p className="text-muted text-center py-8">This case is empty. Run extraction on the Ingestion tab first.</p>
     </Panel>
   )
 
@@ -260,7 +260,7 @@ export default function Entities({ refreshKey }) {
               setSelectedCaseId(e.target.value)
             }
           }}
-          className="block w-full sm:w-[250px] px-3 py-2 bg-panel border border-border-light rounded-md text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
+          className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         >
           <option value="">Select a case…</option>
           <option value="__all__">All cases</option>
@@ -279,16 +279,16 @@ export default function Entities({ refreshKey }) {
           animate={{ opacity: 1, y: 0 }}
         >
           {!Array.isArray(data) ? (
-            <p className="text-danger text-center py-8 dark:text-dark-danger">Error: Invalid data format (expected array)</p>
+            <p className="text-danger text-center py-8">Error: Invalid data format (expected array)</p>
           ) : data.length === 0 ? (
-            <p className="text-muted text-center py-8 dark:text-dark-muted">No entities extracted yet across any cases. Run ingestion first.</p>
+            <p className="text-muted text-center py-8">No entities extracted yet across any cases. Run ingestion first.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-muted font-semibold border-b border-border-light bg-panel-raised dark:text-dark-muted dark:border-dark-border dark:bg-dark-panel-raised">
-                  <th className="py-3 px-4 font-semibold text-text dark:text-dark-text">Type</th>
-                  <th className="py-3 px-4 font-semibold text-text dark:text-dark-text">Value</th>
-                  <th className="py-3 px-4 font-semibold text-text dark:text-dark-text">Case</th>
+                <tr className="text-left text-muted font-normal border-b border-border">
+                  <th className="pb-3 font-medium text-text">Type</th>
+                  <th className="pb-3 font-medium text-text">Value</th>
+                  <th className="pb-3 font-medium text-text">Case</th>
                 </tr>
               </thead>
               <tbody>
@@ -300,15 +300,15 @@ export default function Entities({ refreshKey }) {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.02 }}
-                      className="border-b border-border-light hover:bg-panel-raised/50 transition-colors dark:border-dark-border dark:hover:bg-dark-panel-raised/50"
+                      className="border-b border-border/50 hover:bg-panel-raised/50 transition-colors"
                     >
-                      <td className="py-3 px-4">
+                      <td className="py-3">
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium ${c.bg} ${c.text} ${c.border}`}>
                           {entity.type}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-text dark:text-dark-text">{entity.value}</td>
-                      <td className="py-3 px-4 text-muted font-mono dark:text-dark-muted">{entity.case_name || entity.case_id}</td>
+                      <td className="py-3 text-text">{entity.value}</td>
+                      <td className="py-3 text-muted font-mono">{entity.case_name || entity.case_id}</td>
                     </motion.tr>
                   )
                 })}
@@ -329,17 +329,17 @@ export default function Entities({ refreshKey }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: typeIndex * 0.08 }}
             >
-              <div className="bg-panel-raised/50 border border-border-light rounded-md p-4 h-full dark:bg-dark-panel-raised/50 dark:border-dark-border">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted mb-3 dark:text-dark-muted">
+              <div className="bg-panel-raised/50 border border-border/50 rounded-lg p-4 h-full">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted mb-3">
                   <type.Icon className={`w-4 h-4 ${COLOR_CLASSES[type.color].text}`} />
-                  <span className="text-text dark:text-dark-text">{type.label}</span>
-                  <span className="ml-auto px-2 py-0.5 bg-panel rounded text-xs font-mono text-muted dark:bg-dark-panel dark:text-dark-muted">
+                  <span className="text-text">{type.label}</span>
+                  <span className="ml-auto px-2 py-0.5 bg-bg rounded text-xs font-mono text-muted">
                     {data[type.key]?.length || 0}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 min-h-[80px]">
                   {(!data[type.key] || data[type.key].length === 0) && (
-                    <span className="text-xs text-muted/60 italic w-full dark:text-dark-muted/60">No records extracted for this case yet.</span>
+                    <span className="text-xs text-muted/60 italic w-full">No records extracted for this case yet.</span>
                   )}
                   {data[type.key]?.map((item, itemIndex) => (
                     <motion.span
