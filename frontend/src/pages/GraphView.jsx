@@ -244,11 +244,18 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
   const currentCaseId = isAllCases ? null : selectedCaseId
 
   if (fullscreen) {
+    // Was previously bg-gray-900/bg-gray-800 (Tailwind's default palette,
+    // not this app's custom bg/panel colors) with a completely unstyled
+    // native <select> and buttons built from raw inline styles (one of
+    // which referenced a nonexistent `className="primary"`). Rebuilt here
+    // to use the same tokens (bg-bg, bg-panel, border-border, bg-accent,
+    // text-muted, etc.) as the rest of the app so fullscreen mode actually
+    // matches instead of falling back to unstyled browser defaults.
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-gray-900">
+      <div className="fixed inset-0 z-50 flex flex-col bg-bg">
         {/* Compact toolbar at top */}
-        <div className="flex items-center justify-between gap-2 px-4 py-2 bg-gray-800 text-sm font-mono">
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="flex items-center justify-between gap-2 px-4 py-2 bg-panel border-b border-border text-sm font-mono">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Single dropdown for case selection */}
             <select
               value={isAllCases ? '__all__' : selectedCaseId}
@@ -261,7 +268,7 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
                   setSelectedCaseId(e.target.value)
                 }
               }}
-              style={{ padding: '4px 8px', fontSize: '0.9em', minWidth: 180 }}
+              className="px-3 py-1.5 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg min-w-[180px]"
             >
               <option value="">Select case…</option>
               <option value="__all__">All cases</option>
@@ -271,33 +278,32 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
             </select>
 
             <button
-              className="primary"
               onClick={() => setEditOpen(true)}
-              style={{ padding: '4px 12px', fontSize: '0.9em' }}
+              className="px-3 py-1.5 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
             >
               Edit
             </button>
           </div>
           <button
             onClick={() => setFullscreen(false)}
-            style={{
-              background: '#2a3740',
-              border: 'none',
-              color: '#e7ece9',
-              padding: '4px 12px',
-              cursor: 'pointer',
-              fontSize: '0.9em',
-              borderRadius: '4px'
-            }}
+            className="px-3 py-1.5 bg-panel-raised border border-border text-text rounded-lg hover:bg-panel/80 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
           >
             Exit Fullscreen
           </button>
         </div>
 
         {/* Full canvas - takes remaining space */}
-        <div className="graph-canvas-wrap" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-          {error && <div className="alert-row" style={{ position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10 }}>{error}</div>}
-          {empty && !error && <p className="empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>Canvas empty. Run ingestion first.</p>}
+        <div className="relative flex-1 overflow-hidden">
+          {error && (
+            <div className="absolute top-3 left-3 right-3 z-10 bg-danger/10 text-danger border border-danger/30 rounded-lg p-3 text-sm font-mono">
+              {error}
+            </div>
+          )}
+          {empty && !error && (
+            <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted font-mono">
+              Canvas empty. Run ingestion first.
+            </p>
+          )}
           {!empty && !error && (
             <>
               <div id="graph-canvas" ref={containerRef} style={{ width: '100%', height: '100%' }} />
