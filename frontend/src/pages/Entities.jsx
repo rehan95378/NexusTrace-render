@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
 import { useListCases, useEntities, useAllEntities } from '../hooks/useQueries'
+import { SkeletonTable, SkeletonGrid } from '../components/LoadingSkeleton'
 
 // Minimal inline line icons (currentColor, no external icon library) —
 // replaces the previous emoji icons (👤📍🚗📱🏢), which read as a generic
@@ -176,7 +177,7 @@ export default function Entities({ refreshKey }) {
           </option>
         ))}
       </select>
-      <p className="text-light-muted dark:text-muted text-center py-8">{isAllCases ? 'Loading…' : 'Select a case to view its entity profiles.'}</p>
+      {isAllCases ? <SkeletonTable rows={5} /> : <SkeletonGrid cols={5} rows={1} />}
     </Panel>
   )
 
