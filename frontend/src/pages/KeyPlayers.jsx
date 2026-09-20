@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
-import { useListCases, useKeyPlayers } from '../hooks/useQueries'
+import { useListCases, useKeyPlayers, useAllKeyPlayers } from '../hooks/useQueries'
 import { ScoreBar, RankingBadge } from '../components/ConfidenceBadge'
 import { SkeletonTable } from '../components/LoadingSkeleton'
 
@@ -13,7 +13,13 @@ export default function KeyPlayers({ refreshKey }) {
 
   // React Query hooks
   const { data: cases = [] } = useListCases()
-  const { data, isLoading, error } = useKeyPlayers(mode === 'this-case' ? selectedCaseId : null)
+  const { data: caseData, isLoading: isCaseLoading, error: caseError } = useKeyPlayers(selectedCaseId)
+  const { data: allData, isLoading: isAllLoading, error: allError } = useAllKeyPlayers()
+
+  const isAllCases = mode === 'all-cases'
+  const data = isAllCases ? allData : caseData
+  const isLoading = isAllCases ? isAllLoading : isCaseLoading
+  const error = isAllCases ? allError : caseError
 
   useEffect(() => {
     if (cases.length > 0) {
@@ -31,8 +37,6 @@ export default function KeyPlayers({ refreshKey }) {
       localStorage.setItem(LAST_CASE_KEY, selectedCaseId)
     }
   }, [selectedCaseId])
-
-  const isAllCases = mode === 'all-cases'
 
   const renderError = () => (
     <Panel title="Key Player Identification">
