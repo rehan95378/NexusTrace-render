@@ -8,24 +8,51 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Custom dark theme (matching existing CSS variables)
-        bg: '#0f1416',
-        panel: '#161d20',
-        'panel-raised': '#1c2528',
-        border: '#2a3538',
-        text: '#e7ece9',
-        muted: '#8fa0a3',
-        accent: '#e3a008',
-        'accent-dim': '#6b5220',
-        teal: '#2fa8a0',
-        danger: '#c1443c',
-        'danger-dim': '#4a2320',
-        'accent-content': '#14100a',
+        // Light mode (default) — enterprise analyst palette
+        'light-canvas': '#F8FAFC',
+        'light-card': '#FFFFFF',
+        'light-border': '#CBD5E1',
+        'light-border-light': '#E2E8F0',
+        'light-text': '#1E293B',
+        'light-muted': '#64748B',
+        'light-accent': '#0D9488', // Teal primary
+        'light-success': '#16A34A',
+        'light-warning': '#D97706',
+        'light-danger': '#DC2626',
+
+        // Dark mode — preserved from previous version
+        'dark-bg': '#0f1416',
+        'dark-panel': '#161d20',
+        'dark-panel-raised': '#1c2528',
+        'dark-border': '#2a3538',
+        'dark-text': '#e7ece9',
+        'dark-muted': '#8fa0a3',
+        'dark-accent': '#e3a008',
+        'dark-danger': '#c1443c',
+        'dark-teal': '#2fa8a0',
+
+        // Semantic aliases (resolved in use based on dark mode)
+        bg: '#F8FAFC',
+        panel: '#FFFFFF',
+        'panel-raised': '#F8FAFC',
+        border: '#CBD5E1',
+        'border-light': '#E2E8F0',
+        text: '#1E293B',
+        muted: '#64748B',
+        accent: '#0D9488',
+        'accent-dim': '#D1FAE5',
+        teal: '#0D9488',
+        danger: '#DC2626',
+        'danger-dim': '#FEE2E2',
+        success: '#16A34A',
+        'success-dim': '#DCFCE7',
+        warning: '#D97706',
+        'warning-dim': '#FEF3C7',
       },
       fontFamily: {
         display: ['Source Serif 4', 'Georgia', 'serif'],
         body: ['Inter', '-apple-system', 'sans-serif'],
-        mono: ['IBM Plex Mono', 'SFMono-Regular', 'monospace'],
+        mono: ['Roboto Mono', 'IBM Plex Mono', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1.5' }],
@@ -41,14 +68,14 @@ export default {
         '88': '22rem',
       },
       borderRadius: {
-        'sm': '3px',
+        'sm': '2px',
         'md': '4px',
         'lg': '6px',
       },
       boxShadow: {
-        'card': '0 2px 8px rgba(0, 0, 0, 0.3)',
-        'elevated': '0 8px 24px rgba(0, 0, 0, 0.4)',
-        'drawer': '2px 0 16px rgba(0, 0, 0, 0.4)',
+        'card': '0 1px 3px rgba(0, 0, 0, 0.1)',
+        'elevated': '0 4px 12px rgba(0, 0, 0, 0.08)',
+        'drawer': '0 8px 16px rgba(0, 0, 0, 0.12)',
       },
       transitionDuration: {
         'fast': '120ms',
