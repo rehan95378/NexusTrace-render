@@ -44,9 +44,15 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [resetKey, setResetKey] = useState(0)
   const [health, setHealth] = useState(null)
+  // Two separate booleans because "open" means different things at each
+  // size: on mobile the sidebar is an overlay drawer (closed by default),
+  // on desktop it's a persistent column that can be collapsed to free up
+  // space (open by default). One toggle button drives whichever applies.
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(true)
   const isMobile = useIsMobile()
+  const sidebarVisible = isMobile ? sidebarOpen : !sidebarCollapsed
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth({ status: 'unreachable' }))
@@ -70,26 +76,16 @@ export default function App() {
     }
   }
 
-  return (
-    <div className="app-shell min-h-screen flex flex-col bg-bg text-text">
-      {/* Mobile Menu Button (hidden on desktop) */}
-      <button
-        className="md:hidden p-2 bg-panel-raised border-border rounded-lg hover:bg-panel/80 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent"
-        onClick={() => setSidebarOpen((o) => !o)}
-        aria-label="Toggle case menu"
-      >
-        <motion.div
-          className="flex flex-col gap-1.5 w-6 h-5"
-          initial={{ scale: 0.8 }}
-          animate={{ scale: sidebarOpen ? 1 : 0.8 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-        >
-          <span className="block h-0.5 bg-text rounded" />
-          <span className="block h-0.5 bg-text rounded" />
-          <span className="block h-0.5 bg-text rounded" />
-        </motion.div>
-      </button>
+  function toggleSidebar() {
+    if (isMobile) {
+      setSidebarOpen((o) => !o)
+    } else {
+      setSidebarCollapsed((c) => !c)
+    }
+  }
 
+  return (
+    <div className="app-shell h-screen overflow-hidden flex flex-col bg-bg text-text">
       {/* Sidebar Overlay (mobile only) */}
       {sidebarOpen && isMobile && (
         <motion.div
@@ -102,21 +98,36 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar Navigation — always fixed to the left edge. Previously this
-          only got `fixed` positioning while the mobile drawer was open;
-          on desktop it was a normal block sitting in the page's flow, so
-          under the outer flex-col wrapper, <main> was actually rendering
-          BELOW the sidebar's full height instead of beside it — which is
-          the large empty gap you were seeing above every tab's content. */}
+      {/* Sidebar Navigation — toggleable at every screen size via the
+          button in the topbar, rather than being permanently pinned open
+          on desktop. On mobile it's an overlay drawer; on desktop it's a
+          collapsible column that frees up the full page width when
+          hidden — this replaces what the Graph tab's separate "Fullscreen"
+          mode used to do (see GraphView.jsx). */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-panel border-r border-border flex flex-col
                    transition-transform duration-300 ease-out
-                   ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}`}
+                   ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 p-4 border-b border-border">
-            <div className="text-sm font-mono text-muted tracking-wide">SIH26189</div>
-            <h1 className="font-display text-text text-lg mt-1">Evidence Graph System</h1>
+          <div className="flex-shrink-0 p-4 border-b border-border flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-sm font-mono text-muted tracking-wide">SIH26189</div>
+              <h1 className="font-display text-text text-lg mt-1 truncate">Evidence Graph System</h1>
+            </div>
+            {/* Collapse control lives inside the sidebar itself, so it
+                never shifts position as a side effect of <main>'s padding
+                changing — it's part of the panel that's moving, not a
+                separately-positioned control reacting to that move. */}
+            <button
+              onClick={toggleSidebar}
+              aria-label="Hide sidebar"
+              className="flex-shrink-0 p-1.5 rounded-lg text-muted hover:text-text hover:bg-panel-raised transition-colors duration-200"
+            >
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4">
+                <path d="M10 3L5.5 8l4.5 5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
 
           <nav className="flex-1 overflow-y-auto pt-2">
@@ -179,39 +190,60 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Reopen control — only rendered while the sidebar is hidden, at a
+          fixed screen position that never moves. This plus the collapse
+          button inside the sidebar header (above) means the visible
+          control always sits in a stable place for whichever state you're
+          in, rather than one button sliding around as main's padding
+          changes. */}
+      {!sidebarVisible && (
+        <button
+          onClick={toggleSidebar}
+          aria-label="Show sidebar"
+          className="fixed top-4 left-4 z-[60] p-2 bg-panel-raised border border-border rounded-lg text-muted hover:text-text hover:bg-panel transition-colors duration-200 shadow-lg"
+        >
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4">
+            <path d="M6 3l4.5 5-4.5 5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
+
       {/* Main Content */}
       <main
-        className={`flex-1 min-w-0
-                   ${isMobile
-                     ? sidebarOpen
-                       ? 'pl-64'
-                       : 'pl-0'
-                     : 'pl-64'}`}
+        className={`flex-1 min-w-0 h-full flex flex-col overflow-hidden transition-[padding] duration-300 ease-out
+                   ${!isMobile && sidebarVisible ? 'pl-64' : 'pl-0'}`}
       >
-        <div className="topbar flex flex-col md:flex-row md:items-center md:justify-between md:gap-4 md:p-4">
-          <h1 className="font-display text-2xl font-bold text-text md:text-3xl">
-            {activeTab.title}
-          </h1>
+        {/* Graph tab intentionally shows no topbar at all — case selector,
+            edit control, and the graph itself is the entire page, so every
+            pixel goes to the canvas instead of a repeated title. */}
+        {tab !== 'graph' && (
+          <div className="topbar flex-shrink-0 flex items-center gap-3 md:gap-4 md:p-4 px-4 py-3 border-b border-border/60">
+            <h1 className="font-display text-2xl font-bold text-text md:text-3xl flex-1 min-w-0 truncate">
+              {activeTab.title}
+            </h1>
 
-          {/* Theme label (desktop only) */}
-          {!isMobile && (
-            <span className="hidden md:flex items-center gap-2 text-xs font-mono text-muted">
-              {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-            </span>
+            {/* Theme label (desktop only) */}
+            {!isMobile && (
+              <span className="hidden md:flex items-center gap-2 text-xs font-mono text-muted flex-shrink-0">
+                {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className={tab === 'graph' ? 'flex-1 min-h-0 flex flex-col p-3 md:p-4' : 'flex-1 min-h-0 overflow-y-auto'}>
+          {tab === 'cases' && <Cases onNavigateToIngestion={() => selectTab('ingestion')} />}
+          {tab === 'ingestion' && (
+            <Ingestion key={resetKey} onIngested={bumpRefresh} />
           )}
+          {tab === 'entities' && <Entities refreshKey={refreshKey} />}
+          {tab === 'graph' && (
+            <GraphView refreshKey={refreshKey} onGraphChanged={bumpRefresh} />
+          )}
+          {tab === 'key-players' && <KeyPlayers refreshKey={refreshKey} />}
+          {tab === 'anomalies' && <Anomalies refreshKey={refreshKey} />}
+          {tab === 'audit' && <AuditTrail refreshKey={refreshKey} />}
         </div>
-
-        {tab === 'cases' && <Cases onNavigateToIngestion={() => selectTab('ingestion')} />}
-        {tab === 'ingestion' && (
-          <Ingestion key={resetKey} onIngested={bumpRefresh} />
-        )}
-        {tab === 'entities' && <Entities refreshKey={refreshKey} />}
-        {tab === 'graph' && (
-          <GraphView refreshKey={refreshKey} onGraphChanged={bumpRefresh} />
-        )}
-        {tab === 'key-players' && <KeyPlayers refreshKey={refreshKey} />}
-        {tab === 'anomalies' && <Anomalies refreshKey={refreshKey} />}
-        {tab === 'audit' && <AuditTrail refreshKey={refreshKey} />}
       </main>
     </div>
   )

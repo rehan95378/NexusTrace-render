@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { DataSet } from 'vis-data'
 import { Network } from 'vis-network'
-import Panel from '../components/Panel'
 import NodeDetailsPanel from '../components/NodeDetailsPanel'
 import GraphEditPanel from '../components/GraphEditPanel'
 import { api } from '../api'
@@ -46,7 +45,6 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
   const [selected, setSelected] = useState(null)
   const [bump, setBump] = useState(0)
   const [editOpen, setEditOpen] = useState(false)
-  const [fullscreen, setFullscreen] = useState(false)
 
   useEffect(() => {
     api.listCases().then((list) => {
@@ -243,98 +241,9 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
   const isAllCases = mode === 'all-cases'
   const currentCaseId = isAllCases ? null : selectedCaseId
 
-  if (fullscreen) {
-    // Was previously bg-gray-900/bg-gray-800 (Tailwind's default palette,
-    // not this app's custom bg/panel colors) with a completely unstyled
-    // native <select> and buttons built from raw inline styles (one of
-    // which referenced a nonexistent `className="primary"`). Rebuilt here
-    // to use the same tokens (bg-bg, bg-panel, border-border, bg-accent,
-    // text-muted, etc.) as the rest of the app so fullscreen mode actually
-    // matches instead of falling back to unstyled browser defaults.
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-bg">
-        {/* Compact toolbar at top */}
-        <div className="flex items-center justify-between gap-2 px-4 py-2 bg-panel border-b border-border text-sm font-mono">
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Single dropdown for case selection */}
-            <select
-              value={isAllCases ? '__all__' : selectedCaseId}
-              onChange={(e) => {
-                if (e.target.value === '__all__') {
-                  setMode('all-cases')
-                  setSelectedCaseId('')
-                } else {
-                  setMode('this-case')
-                  setSelectedCaseId(e.target.value)
-                }
-              }}
-              className="px-3 py-1.5 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg min-w-[180px]"
-            >
-              <option value="">Select case…</option>
-              <option value="__all__">All cases</option>
-              {cases.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-
-            <button
-              onClick={() => setEditOpen(true)}
-              className="px-3 py-1.5 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
-            >
-              Edit
-            </button>
-          </div>
-          <button
-            onClick={() => setFullscreen(false)}
-            className="px-3 py-1.5 bg-panel-raised border border-border text-text rounded-lg hover:bg-panel/80 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
-          >
-            Exit Fullscreen
-          </button>
-        </div>
-
-        {/* Full canvas - takes remaining space */}
-        <div className="relative flex-1 overflow-hidden">
-          {error && (
-            <div className="absolute top-3 left-3 right-3 z-10 bg-danger/10 text-danger border border-danger/30 rounded-lg p-3 text-sm font-mono">
-              {error}
-            </div>
-          )}
-          {empty && !error && (
-            <p className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted font-mono">
-              Canvas empty. Run ingestion first.
-            </p>
-          )}
-          {!empty && !error && (
-            <>
-              <div id="graph-canvas" ref={containerRef} style={{ width: '100%', height: '100%' }} />
-              {selected && (
-                <NodeDetailsPanel
-                  caseId={selected.caseId}
-                  type={selected.type}
-                  id={selected.id}
-                  position={selected.position}
-                  onClose={() => setSelected(null)}
-                />
-              )}
-            </>
-          )}
-        </div>
-
-        {editOpen && (
-          <GraphEditPanel
-            caseId={currentCaseId}
-            allCasesMode={isAllCases}
-            onClose={() => setEditOpen(false)}
-            onChanged={handleChanged}
-          />
-        )}
-      </div>
-    )
-  }
-
   return (
-    <Panel title="Evidence Graph Map" hint={isAllCases ? "Combined graph across cases. Dashed edges = cross-case links." : "Force-directed map of entities in the selected case."}>
-      <div className="flex flex-wrap items-center gap-4 mb-4">
+    <div className="flex flex-col h-full">
+      <div className="flex flex-wrap items-center gap-3 mb-3 flex-shrink-0">
         <select
           value={isAllCases ? '__all__' : selectedCaseId}
           onChange={(e) => {
@@ -346,7 +255,7 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
               setSelectedCaseId(e.target.value)
             }
           }}
-          className="px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg min-w-[250px]"
+          className="px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg min-w-[220px]"
         >
           <option value="">Select a case…</option>
           <option value="__all__">All cases</option>
@@ -357,11 +266,18 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
           ))}
         </select>
 
+        <button
+          className="px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
+          onClick={() => setEditOpen(true)}
+        >
+          Edit graph
+        </button>
+
         {isAllCases && cases.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted">Show:</span>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted">Show:</span>
             {cases.map((c) => (
-              <label key={c.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={visibleCaseIds.has(c.id)}
@@ -375,26 +291,19 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
         )}
       </div>
 
-      <div className="flex items-center gap-2 mb-4">
-        <button
-          className="px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
-          onClick={() => setEditOpen(true)}
-        >
-          Edit graph
-        </button>
-        <button
-          className="px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
-          onClick={() => setFullscreen(true)}
-        >
-          Fullscreen
-        </button>
-        {isAllCases && <span className="text-sm text-muted ml-2">Editing in all-cases mode allows cross-case linking</span>}
-      </div>
+      {error && (
+        <div className="flex-shrink-0 bg-danger/10 text-danger border border-danger/30 rounded-lg p-3 mb-3 text-sm font-mono">
+          {error}
+        </div>
+      )}
 
-      {error && <div className="bg-danger/10 text-danger border border-danger/30 rounded-lg p-3 mb-4 text-sm font-mono">{error}</div>}
-      {empty && !error && <p className="text-center py-8 text-muted font-mono">Canvas empty. Run ingestion in the Ingestion tab first.</p>}
-      <div className="relative">
-        <div id="graph-canvas" ref={containerRef} className="w-full h-[640px] bg-bg rounded-lg" />
+      <div className="relative flex-1 min-h-0 rounded-lg overflow-hidden bg-bg border border-border">
+        {empty && !error && (
+          <p className="absolute inset-0 flex items-center justify-center text-muted font-mono text-sm px-4 text-center">
+            Canvas empty. Run ingestion in the Ingestion tab first.
+          </p>
+        )}
+        <div id="graph-canvas" ref={containerRef} className="w-full h-full" />
         {selected && (
           <NodeDetailsPanel
             caseId={selected.caseId}
@@ -414,6 +323,6 @@ export default function GraphView({ refreshKey, onGraphChanged }) {
           onChanged={handleChanged}
         />
       )}
-    </Panel>
+    </div>
   )
 }

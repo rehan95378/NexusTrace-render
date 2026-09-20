@@ -31,14 +31,14 @@ export default function Ingestion({ onIngested }) {
 
   async function runIngestion() {
     if (!selectedCaseId) {
-      setStatus({ kind: 'error', message: 'Select a case first.' })
+      setStatus({ kind: 'error', message: 'Select a case before running extraction.' })
       return
     }
     if (!firText.trim() && !cdrText.trim()) {
-      setStatus({ kind: 'error', message: 'Paste at least one FIR or CDR text block first.' })
+      setStatus({ kind: 'error', message: 'Add an FIR report or CDR log before running extraction.' })
       return
     }
-    setStatus({ kind: 'busy', message: 'Processing cross-channel inputs…' })
+    setStatus({ kind: 'busy', message: 'Extracting entities and mapping relationships…' })
     try {
       const result = await api.ingest(selectedCaseId, firText, cdrText, appendMode)
       if (!result.ok) {
@@ -52,9 +52,9 @@ export default function Ingestion({ onIngested }) {
         `${result.phones.length} phones`,
         `${result.organizations.length} organizations`,
       ]
-      let msg = `Fused. Case graph now holds ${parts.join(', ')}.`
+      let msg = `Extraction complete — case graph now has ${parts.join(', ')}.`
       if (result.tabular_cdr_detected) {
-        msg += ` Detected tabular CDR format — parsed ${result.tabular_numbers_parsed} numbers directly.`
+        msg += ` Tabular CDR format detected — ${result.tabular_numbers_parsed} numbers parsed directly.`
       }
       setStatus({ kind: 'success', message: msg })
       onIngested?.()
@@ -64,10 +64,14 @@ export default function Ingestion({ onIngested }) {
   }
 
   async function clearCase() {
-    setStatus({ kind: 'busy', message: 'Wiping this case’s graph and audit log…' })
+    if (!selectedCaseId) {
+      setStatus({ kind: 'error', message: 'Select a case first.' })
+      return
+    }
+    setStatus({ kind: 'busy', message: 'Clearing case graph and audit log…' })
     try {
       await api.clearCase(selectedCaseId)
-      setStatus({ kind: 'success', message: 'This case’s graph and audit log are wiped clean.' })
+      setStatus({ kind: 'success', message: 'Case cleared. Ready for a fresh ingestion.' })
       onIngested?.()
     } catch (err) {
       setStatus({ kind: 'error', message: err.message })
@@ -78,11 +82,11 @@ export default function Ingestion({ onIngested }) {
     <>
       <Panel
         title="Multi-Channel Ingestion"
-        hint="Paste any combination of text blocks from your reference dossiers below to trigger network mapping for this case."
+        hint="Add FIR reports and call/transaction records for a case — entities and relationships are extracted and added to the case graph automatically."
       >
         <div className="mb-4">
           <label htmlFor="case-select" className="block text-sm font-medium text-muted mb-1">
-            Case:
+            Case
           </label>
           <select
             id="case-select"
@@ -102,26 +106,26 @@ export default function Ingestion({ onIngested }) {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="fir" className="block text-sm font-medium text-muted mb-1">
-              Raw FIR / Intelligence Field Report
+              FIR / Field Report
             </label>
             <textarea
               id="fir"
               rows={4}
               className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none"
-              placeholder="Paste FIR / field report text…"
+              placeholder="Paste FIR or field report text…"
               value={firText}
               onChange={(e) => setFirText(e.target.value)}
             />
           </div>
           <div>
             <label htmlFor="cdr" className="block text-sm font-medium text-muted mb-1">
-              Call Log / CDR / Ledger Summary
+              Call Records / Transaction Log
             </label>
             <textarea
               id="cdr"
               rows={4}
               className="block w-full px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg h-[120px] resize-none"
-              placeholder="Paste CDR / call log / ledger text…"
+              placeholder="Paste CDR, call log, or ledger text…"
               value={cdrText}
               onChange={(e) => setCdrText(e.target.value)}
             />
@@ -135,7 +139,7 @@ export default function Ingestion({ onIngested }) {
             onChange={(e) => setAppendMode(e.target.checked)}
             className="h-4 w-4 text-accent bg-bg border border-border rounded focus:ring-accent"
           />
-          Append new report to this case's existing graph (live-update)
+          Add to this case's existing graph, instead of replacing it
         </label>
 
         <div className="flex flex-col sm:flex-row gap-3 mt-4">
