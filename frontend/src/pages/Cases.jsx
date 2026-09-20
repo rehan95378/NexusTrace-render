@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
 import { useListCases, useCreateCase, useDeleteCase } from '../hooks/useQueries'
 import { useCaseStore } from '../store/caseStore'
+import { SkeletonTable } from '../components/LoadingSkeleton'
 
 /**
  * Cases tab — case management (list, create, delete).
@@ -85,7 +86,7 @@ export default function Cases({ onNavigateToIngestion }) {
         </form>
 
         {isLoading && !cases.length && (
-          <p className="text-light-muted dark:text-muted text-center py-8">Loading cases…</p>
+          <SkeletonTable rows={4} />
         )}
         {cases.length === 0 && !isLoading && (
           <motion.p
