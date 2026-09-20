@@ -97,7 +97,7 @@ export default function Anomalies({ refreshKey }) {
             setSelectedCaseId(e.target.value)
           }
         }}
-        className="block w-full sm:w-[250px] px-3 py-2 bg-panel border border-border-light rounded-md text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
+        className="block w-full sm:w-[250px] px-3 py-2 bg-bg border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
       >
         <option value="">Select a case…</option>
         <option value="__all__">All cases</option>
@@ -112,8 +112,8 @@ export default function Anomalies({ refreshKey }) {
 
   const EmptyState = ({ message, Icon = SearchIcon }) => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <Icon className="w-8 h-8 text-muted/50 mb-3 dark:text-dark-muted/50" />
-      <p className="text-muted text-sm dark:text-dark-muted">{message}</p>
+      <Icon className="w-8 h-8 text-muted/50 mb-3" />
+      <p className="text-muted text-sm">{message}</p>
     </div>
   )
 
@@ -122,14 +122,14 @@ export default function Anomalies({ refreshKey }) {
       key={key}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-start gap-3 p-3 rounded-md text-sm ${
+      className={`flex items-start gap-3 p-3 rounded-lg text-sm ${
         type === 'warning'
-          ? 'bg-warning-dim text-warning border border-warning dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700'
+          ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
           : type === 'info'
-          ? 'bg-blue-100 text-blue-700 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700'
+          ? 'bg-blue-500/10 text-blue-300 border border-blue-500/30'
           : type === 'success'
-          ? 'bg-success-dim text-success border border-success dark:bg-dark-teal/20 dark:text-dark-teal dark:border-dark-teal'
-          : 'bg-danger-dim text-danger border border-danger dark:bg-dark-danger/20 dark:text-dark-danger dark:border-dark-danger'
+          ? 'bg-teal/10 text-teal border border-teal/30'
+          : 'bg-danger/10 text-danger border border-danger/30'
       }`}
     >
       {children}
@@ -180,7 +180,7 @@ export default function Anomalies({ refreshKey }) {
           >
             {data.cycles.map((cycle, i) => (
               <AlertRow key={i} type="warning">
-                <span className="font-mono text-xs">Cycle #{i + 1}</span>
+                <span className="font-mono text-xs text-amber-300">Cycle #{i + 1}</span>
                 <span>{cycle.join(' → ')}</span>
               </AlertRow>
             ))}
@@ -200,8 +200,8 @@ export default function Anomalies({ refreshKey }) {
             {data.high_connectivity.map((row, i) => (
               <AlertRow key={row.name} type="info">
                 <div className="flex-1">
-                  <div className="font-medium">{row.name}</div>
-                  <div className="text-xs font-mono text-muted dark:text-dark-muted">{row.degree} connections (network average: {row.network_average})</div>
+                  <div className="font-medium text-blue-300">{row.name}</div>
+                  <div className="text-xs font-mono text-muted">{row.degree} connections (network average: {row.network_average})</div>
                 </div>
               </AlertRow>
             ))}
@@ -226,7 +226,7 @@ export default function Anomalies({ refreshKey }) {
             </AlertRow>
             {data.bridges.map((name, i) => (
               <AlertRow key={name} type="danger">
-                <span className="font-mono text-xs">Bridge #{i + 1}</span>
+                <span className="font-mono text-xs text-danger">Bridge #{i + 1}</span>
                 <span>{name} — removing this node would split the network into separate clusters.</span>
               </AlertRow>
             ))}
@@ -241,7 +241,7 @@ export default function Anomalies({ refreshKey }) {
           >
             {data.bridges.map((name, i) => (
               <AlertRow key={name} type="danger">
-                <span className="font-mono text-xs">Bridge #{i + 1}</span>
+                <span className="font-mono text-xs text-danger">Bridge #{i + 1}</span>
                 <span>{name} — removing this node would split the network into separate clusters.</span>
               </AlertRow>
             ))}

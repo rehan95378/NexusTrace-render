@@ -45,14 +45,14 @@ export default function Cases({ onNavigateToIngestion }) {
   }
 
   return (
-    <div className="space-y-6 p-5 md:p-6">
+    <div className="space-y-6">
       <Panel
-        title="Create Case"
-        hint="Start a new investigation or manage existing cases."
+        title="Case Management"
+        hint="Create new cases or manage existing ones."
       >
         {error && (
           <motion.div
-            className="mb-4 p-3 bg-danger-dim border border-danger rounded-md text-danger text-sm dark:bg-dark-danger/20 dark:border-dark-danger"
+            className="mb-4 p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -66,27 +66,27 @@ export default function Cases({ onNavigateToIngestion }) {
         >
           <input
             type="text"
-            placeholder="e.g. FIR 402/2026 — Cyber Stalking Ring"
+            placeholder="New case name, e.g. Case 01 — Nagpur Extortion Ring"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="flex-1 w-full sm:flex-1 bg-panel border border-border-light rounded-md px-4 py-2.5 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg transition-all duration-200 dark:bg-dark-panel dark:border-dark-border dark:text-dark-text dark:placeholder:text-dark-muted dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
+            className="flex-1 w-full sm:flex-1 bg-bg border border-border rounded-lg px-4 py-2.5 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-200"
             required
           />
           <button
             type="submit"
             disabled={creating || !newName.trim()}
-            className="px-5 py-2.5 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg dark:bg-dark-accent dark:text-dark-text dark:hover:bg-dark-accent/90 dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
+            className="px-5 py-2.5 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
           >
             {creating ? 'Creating…' : 'New Case'}
           </button>
         </form>
 
         {!cases && !error && (
-          <p className="text-muted text-center py-8 dark:text-dark-muted">Loading cases…</p>
+          <p className="text-muted text-center py-8">Loading cases…</p>
         )}
         {cases && cases.length === 0 && (
           <motion.p
-            className="text-muted text-center py-8 dark:text-dark-muted"
+            className="text-muted text-center py-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
@@ -103,11 +103,11 @@ export default function Cases({ onNavigateToIngestion }) {
           >
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-muted font-semibold border-b border-border-light bg-panel-raised dark:text-dark-muted dark:border-dark-border dark:bg-dark-panel-raised">
-                  <th className="py-3 px-4 font-semibold text-text dark:text-dark-text">Case Name</th>
-                  <th className="py-3 px-4 font-semibold text-text dark:text-dark-text">Entities</th>
-                  <th className="py-3 px-4 font-semibold text-text dark:text-dark-text">Created</th>
-                  <th className="py-3 px-4 font-semibold text-text dark:text-dark-text">Actions</th>
+                <tr className="text-left text-muted font-normal border-b border-border">
+                  <th className="pb-3 font-medium text-text">Case Name</th>
+                  <th className="pb-3 font-medium text-text">Entities</th>
+                  <th className="pb-3 font-medium text-text">Created</th>
+                  <th className="pb-3 font-medium text-text">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,25 +117,25 @@ export default function Cases({ onNavigateToIngestion }) {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="border-b border-border-light hover:bg-panel-raised/50 transition-colors dark:border-dark-border dark:hover:bg-dark-panel-raised/50"
+                    className="border-b border-border/50 hover:bg-panel-raised/50 transition-colors"
                   >
-                    <td className="py-3 px-4 font-medium text-text dark:text-dark-text">{c.name}</td>
-                    <td className="py-3 px-4 text-muted font-mono dark:text-dark-muted">
-                      {c.entity_count}
+                    <td className="py-4 font-medium text-text">{c.name}</td>
+                    <td className="py-4 text-muted">
+                      {c.entity_count} {c.entity_count === 1 ? 'entity' : 'entities'}
                     </td>
-                    <td className="py-3 px-4 text-muted font-mono dark:text-dark-muted">
+                    <td className="py-4 text-muted font-mono">
                       {new Date(c.created_at).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-4">
                       <div className="flex flex-col sm:flex-row gap-2">
                         <button
-                          className="px-3 py-1.5 bg-accent text-white font-medium rounded-md hover:bg-accent/90 transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg dark:bg-dark-accent dark:text-dark-text dark:hover:bg-dark-accent/90 dark:focus:ring-dark-accent dark:focus:ring-offset-dark-bg"
+                          className="flex-1 px-3 py-1.5 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
                           onClick={onNavigateToIngestion}
                         >
-                          Open
+                          Open in Ingestion
                         </button>
                         <button
-                          className="px-3 py-1.5 border border-danger text-danger rounded-md hover:bg-danger-dim transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg dark:border-dark-danger dark:text-dark-danger dark:hover:bg-dark-danger/20 dark:focus:ring-dark-danger dark:focus:ring-offset-dark-bg"
+                          className="flex-1 px-3 py-1.5 border border-danger text-danger rounded-lg hover:bg-danger/10 transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-bg"
                           onClick={() => handleDelete(c.id, c.name)}
                         >
                           Delete
