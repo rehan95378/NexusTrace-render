@@ -48,7 +48,7 @@ export default function Anomalies({ refreshKey }) {
 
   // React Query hooks
   const { data: cases = [] } = useListCases()
-  const { data, isLoading, error } = useAnomalies(selectedCaseId)
+  const { data, isLoading, error } = useAnomalies(mode === 'this-case' ? selectedCaseId : null)
 
   useEffect(() => {
     if (cases.length > 0) {

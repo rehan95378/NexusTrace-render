@@ -13,7 +13,7 @@ export default function KeyPlayers({ refreshKey }) {
 
   // React Query hooks
   const { data: cases = [] } = useListCases()
-  const { data, isLoading, error } = useKeyPlayers(selectedCaseId)
+  const { data, isLoading, error } = useKeyPlayers(mode === 'this-case' ? selectedCaseId : null)
 
   useEffect(() => {
     if (cases.length > 0) {
@@ -57,7 +57,7 @@ export default function KeyPlayers({ refreshKey }) {
           </option>
         ))}
       </select>
-      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error?.message}</div>
+      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error?.message || 'Error loading key players'}</div>
     </Panel>
   )
 
