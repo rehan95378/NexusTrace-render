@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
-import { api } from '../api'
+import { useListCases, useEntities, useAllEntities } from '../hooks/useQueries'
 
 // Minimal inline line icons (currentColor, no external icon library) —
 // replaces the previous emoji icons (👤📍🚗📱🏢), which read as a generic
@@ -91,30 +91,23 @@ const LAST_CASE_KEY = 'sih_last_entities_case_id'
 
 export default function Entities({ refreshKey }) {
   const [mode, setMode] = useState('this-case')
-  const [cases, setCases] = useState([])
   const [selectedCaseId, setSelectedCaseId] = useState('')
-  const [data, setData] = useState(null)
-  const [error, setError] = useState(null)
+
+  // React Query hooks
+  const { data: cases = [] } = useListCases()
+  const { data: caseEntities, isLoading: isCaseLoading, error: caseError } = useEntities(selectedCaseId)
+  const { data: allCasesEntities, isLoading: isAllLoading, error: allError } = useAllEntities()
 
   useEffect(() => {
-    api.listCases().then((list) => {
-      setCases(list)
+    if (cases.length > 0) {
       const lastId = localStorage.getItem(LAST_CASE_KEY)
-      if (lastId && list.find(c => c.id === lastId)) {
+      if (lastId && cases.find(c => c.id === lastId)) {
         setSelectedCaseId(lastId)
-      } else if (list.length > 0) {
-        setSelectedCaseId(list[0].id)
+      } else {
+        setSelectedCaseId(cases[0].id)
       }
-    })
-  }, [])
-
-  // Re-fetch the case list (entity counts etc.) whenever something upstream
-  // (ingestion, clear, graph edit) bumps refreshKey — previously this list
-  // was only ever fetched once on mount, so counts went stale after any
-  // ingest/clear until the tab was revisited.
-  useEffect(() => {
-    api.listCases().then(setCases).catch(() => {})
-  }, [refreshKey])
+    }
+  }, [cases])
 
   useEffect(() => {
     if (selectedCaseId) {
@@ -122,37 +115,9 @@ export default function Entities({ refreshKey }) {
     }
   }, [selectedCaseId])
 
-  useEffect(() => {
-    setData(null)
-    setError(null)
-
-    const fetchData = async () => {
-      if (mode === 'all-cases') {
-        try {
-          const result = await api.allEntities()
-          if (Array.isArray(result)) {
-            setData(result)
-          } else {
-            console.error('Expected array but got:', result)
-            setError('Invalid data format: expected array of entities')
-          }
-        } catch (e) {
-          console.error('Failed to load all entities:', e)
-          setError(`Failed to load entities: ${e.message}`)
-        }
-      } else if (selectedCaseId) {
-        try {
-          const result = await api.entities(selectedCaseId)
-          setData(result)
-        } catch (e) {
-          console.error('Failed to load case entities:', e)
-          setError(`Failed to load entities: ${e.message}`)
-        }
-      }
-    }
-
-    fetchData()
-  }, [mode, selectedCaseId, refreshKey])
+  const isLoading = mode === 'all-cases' ? isAllLoading : isCaseLoading
+  const error = mode === 'all-cases' ? allError : caseError
+  const data = mode === 'all-cases' ? allCasesEntities : caseEntities
 
   const isAllCases = mode === 'all-cases'
 
@@ -184,7 +149,7 @@ export default function Entities({ refreshKey }) {
           </option>
         ))}
       </select>
-      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error}</div>
+      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error?.message}</div>
     </Panel>
   )
 
@@ -243,8 +208,8 @@ export default function Entities({ refreshKey }) {
   )
 
   if (error) return renderError()
-  if (!data) return renderLoading()
-  if (mode === 'this-case' && !data.is_processed) return renderEmptyCase()
+  if (isLoading || !data) return renderLoading()
+  if (mode === 'this-case' && data && !data.is_processed) return renderEmptyCase()
 
   return (
     <Panel title="" hint={isAllCases ? "Entities across all cases." : "Entities in the selected case's graph."}>
