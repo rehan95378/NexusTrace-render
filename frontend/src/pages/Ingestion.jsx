@@ -1,27 +1,30 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
-import { api } from '../api'
+import { useListCases, useIngest, useClearCase } from '../hooks/useQueries'
 
 const LAST_CASE_KEY = 'sih_last_ingestion_case_id'
 
 export default function Ingestion({ onIngested }) {
-  const [cases, setCases] = useState([])
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [firText, setFirText] = useState('')
   const [cdrText, setCdrText] = useState('')
   const [appendMode, setAppendMode] = useState(false)
-  const [status, setStatus] = useState(null) // { kind: 'success'|'error'|'busy', message }
+  const [status, setStatus] = useState(null)
+
+  // React Query hooks
+  const { data: cases = [] } = useListCases()
+  const ingestMutation = useIngest()
+  const clearMutation = useClearCase()
 
   useEffect(() => {
-    api.listCases().then((list) => {
-      setCases(list)
+    if (cases.length > 0) {
       const lastId = localStorage.getItem(LAST_CASE_KEY)
-      if (lastId && list.find(c => c.id === lastId)) {
+      if (lastId && cases.find(c => c.id === lastId)) {
         setSelectedCaseId(lastId)
       }
-    })
-  }, [])
+    }
+  }, [cases])
 
   useEffect(() => {
     if (selectedCaseId) {
@@ -40,7 +43,7 @@ export default function Ingestion({ onIngested }) {
     }
     setStatus({ kind: 'busy', message: 'Extracting entities and mapping relationships…' })
     try {
-      const result = await api.ingest(selectedCaseId, firText, cdrText, appendMode)
+      const result = await ingestMutation.mutateAsync({ caseId: selectedCaseId, firText, cdrText, appendMode })
       if (!result.ok) {
         setStatus({ kind: 'error', message: result.error })
         return
@@ -70,7 +73,7 @@ export default function Ingestion({ onIngested }) {
     }
     setStatus({ kind: 'busy', message: 'Clearing case graph and audit log…' })
     try {
-      await api.clearCase(selectedCaseId)
+      await clearMutation.mutateAsync(selectedCaseId)
       setStatus({ kind: 'success', message: 'Case cleared. Ready for a fresh ingestion.' })
       onIngested?.()
     } catch (err) {

@@ -3,7 +3,7 @@ import { DataSet } from 'vis-data'
 import { Network } from 'vis-network'
 import NodeDetailsPanel from '../components/NodeDetailsPanel'
 import GraphEditPanel from '../components/GraphEditPanel'
-import { api } from '../api'
+import { useListCases, useGraph, useAllGraph } from '../hooks/useQueries'
 
 const LAST_CASE_KEY = 'sih_last_graph_case_id'
 
@@ -42,39 +42,29 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
   const containerRef = useRef(null)
   const networkRef = useRef(null)
   const [mode, setMode] = useState('this-case')
-  const [cases, setCases] = useState([])
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [visibleCaseIds, setVisibleCaseIds] = useState(new Set())
-  const [empty, setEmpty] = useState(false)
-  const [error, setError] = useState(null)
   const [selected, setSelected] = useState(null)
-  const [bump, setBump] = useState(0)
   const [editOpen, setEditOpen] = useState(false)
 
+  // React Query hooks
+  const { data: cases = [] } = useListCases()
+  const { data: caseGraphData } = useGraph(selectedCaseId)
+  const { data: allGraphData } = useAllGraph()
+
+  const isAllCases = mode === 'all-cases'
+  const graphData = isAllCases ? allGraphData : caseGraphData
+  const empty = !graphData || graphData.nodes.length === 0
+
   useEffect(() => {
-    api.listCases().then((list) => {
-      setCases(list)
-      const allIds = new Set(list.map(c => c.id))
-      setVisibleCaseIds(allIds)
+    if (cases.length > 0) {
+      setVisibleCaseIds(new Set(cases.map(c => c.id)))
       const lastId = localStorage.getItem(LAST_CASE_KEY)
-      if (lastId && list.find(c => c.id === lastId)) {
+      if (lastId && cases.find(c => c.id === lastId)) {
         setSelectedCaseId(lastId)
       }
-    })
-  }, [])
-
-  // Keep the case list (and therefore visibleCaseIds) fresh after
-  // ingestion/clear/edits, not just on first mount.
-  useEffect(() => {
-    api.listCases().then((list) => {
-      setCases(list)
-      setVisibleCaseIds((prev) => {
-        const next = new Set(prev)
-        list.forEach((c) => next.add(c.id))
-        return next
-      })
-    }).catch(() => {})
-  }, [refreshKey])
+    }
+  }, [cases])
 
   useEffect(() => {
     if (selectedCaseId) {
@@ -83,153 +73,138 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
   }, [selectedCaseId])
 
   useEffect(() => {
-    let cancelled = false
-    setSelected(null)
-
-    const isAllCases = mode === 'all-cases'
-    const fetchPromise = isAllCases ? api.allGraph() : (selectedCaseId ? api.graph(selectedCaseId) : null)
-
-    if (!fetchPromise) {
-      setEmpty(true)
+    if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
+      setSelected(null)
+      if (networkRef.current) {
+        networkRef.current.destroy()
+        networkRef.current = null
+      }
       return
     }
 
-    fetchPromise.then((result) => {
-      if (cancelled) return
+    let nodes = graphData.nodes
+    let edges = graphData.edges || []
 
-      let nodes = result.nodes
-      let edges = result.edges
-
-      // In all-cases mode, filter nodes/edges by visible case checkboxes
-      if (isAllCases) {
-        nodes = nodes.filter(n => visibleCaseIds.has(n.case_id))
-        edges = edges.filter(e => {
-          // For cross-case edges, show if either endpoint's case is visible
-          if (e.link_type === 'cross_case') {
-            const srcCase = nodes.find(n => n.id === e.source)?.case_id
-            const tgtCase = nodes.find(n => n.id === e.target)?.case_id
-            return (srcCase && visibleCaseIds.has(srcCase)) || (tgtCase && visibleCaseIds.has(tgtCase))
-          }
-          // For in-case edges, show if the case is visible
-          return visibleCaseIds.has(e.case_id)
-        })
-      }
-
-      if (nodes.length === 0) {
-        setEmpty(true)
-        // Destroy the network to clear the canvas for empty cases
-        if (networkRef.current) {
-          networkRef.current.destroy()
-          networkRef.current = null
+    // In all-cases mode, filter nodes/edges by visible case checkboxes
+    if (isAllCases) {
+      nodes = nodes.filter(n => visibleCaseIds.has(n.case_id))
+      edges = edges.filter(e => {
+        // For cross-case edges, show if either endpoint's case is visible
+        if (e.link_type === 'cross_case') {
+          const srcCase = nodes.find(n => n.id === e.source)?.case_id
+          const tgtCase = nodes.find(n => n.id === e.target)?.case_id
+          return (srcCase && visibleCaseIds.has(srcCase)) || (tgtCase && visibleCaseIds.has(tgtCase))
         }
-        return
-      }
-      setEmpty(false)
+        // For in-case edges, show if the case is visible
+        return visibleCaseIds.has(e.case_id)
+      })
+    }
 
-      const visNodes = new DataSet(
-        nodes.map((n) => ({ id: n.id, label: n.label, color: n.color, font: { color: '#e7ece9', size: 12 } }))
-      )
-
-      const visEdges = new DataSet(
-        edges.map((e, i) => {
-          const isCrossCase = e.link_type === 'cross_case'
-          return {
-            id: i,
-            from: e.source,
-            to: e.target,
-            label: e.label,
-            arrows: 'to',
-            // Cross-case edges: dashed, distinct color
-            dashes: isCrossCase ? [5, 5] : false,
-            color: {
-              color: isCrossCase ? '#b076e0' : '#3a4548',
-              highlight: '#e3a008'
-            },
-            font: { color: '#8fa0a3', size: 10, strokeWidth: 0, align: 'middle' },
-            width: isCrossCase ? 2 : 1,
-          }
-        })
-      )
-
-      const options = {
-        physics: {
-          enabled: true,
-          solver: 'forceAtlas2Based',
-          forceAtlas2Based: {
-            gravitationalConstant: -120,
-            centralGravity: 0.005,
-            springLength: 220,
-            springConstant: 0.08,
-            avoidOverlap: 1,
-          },
-          minVelocity: 0.75,
-          stabilization: { iterations: 200 },
-        },
-        nodes: { shape: 'dot', size: 14, borderWidth: 1 },
-        interaction: { hover: true },
-      }
-
+    if (nodes.length === 0) {
+      setSelected(null)
       if (networkRef.current) {
         networkRef.current.destroy()
+        networkRef.current = null
       }
-      const network = new Network(containerRef.current, { nodes: visNodes, edges: visEdges }, options)
-      networkRef.current = network
+      return
+    }
 
-      network.once('stabilizationIterationsDone', () => {
-        network.setOptions({ physics: false })
+    const visNodes = new DataSet(
+      nodes.map((n) => ({ id: n.id, label: n.label, color: n.color, font: { color: '#e7ece9', size: 12 } }))
+    )
+
+    const visEdges = new DataSet(
+      edges.map((e, i) => {
+        const isCrossCase = e.link_type === 'cross_case'
+        return {
+          id: i,
+          from: e.source,
+          to: e.target,
+          label: e.label,
+          arrows: 'to',
+          dashes: isCrossCase ? [5, 5] : false,
+          color: {
+            color: isCrossCase ? '#b076e0' : '#3a4548',
+            highlight: '#e3a008'
+          },
+          font: { color: '#8fa0a3', size: 10, strokeWidth: 0, align: 'middle' },
+          width: isCrossCase ? 2 : 1,
+        }
       })
-      network.on('dragStart', () => network.setOptions({ physics: true }))
-      network.on('dragEnd', () => network.setOptions({ physics: false }))
+    )
 
-      network.on('click', (params) => {
-        if (params.nodes.length === 0) {
-          setSelected(null)
-          return
-        }
-        const nodeId = params.nodes[0]
+    const options = {
+      physics: {
+        enabled: true,
+        solver: 'forceAtlas2Based',
+        forceAtlas2Based: {
+          gravitationalConstant: -120,
+          centralGravity: 0.005,
+          springLength: 220,
+          springConstant: 0.08,
+          avoidOverlap: 1,
+        },
+        minVelocity: 0.75,
+        stabilization: { iterations: 200 },
+      },
+      nodes: { shape: 'dot', size: 14, borderWidth: 1 },
+      interaction: { hover: true },
+    }
 
-        // For all-cases mode, nodeId format is always "case_id:Type:actual_id".
-        // For this-case mode, nodeId is usually "Type:actual_id" but can
-        // also be a cross-case neighbor in "case_id:Type:actual_id" form —
-        // parseSingleCaseNodeId handles both shapes correctly.
-        let type, id, nodeCaseId
-        if (isAllCases) {
-          const parts = nodeId.split(':')
-          nodeCaseId = parts[0]
-          type = parts[1]
-          id = parts.slice(2).join(':')
-        } else {
-          ;({ type, id, nodeCaseId } = parseSingleCaseNodeId(nodeId, selectedCaseId))
-        }
+    if (networkRef.current) {
+      networkRef.current.destroy()
+    }
+    const network = new Network(containerRef.current, { nodes: visNodes, edges: visEdges }, options)
+    networkRef.current = network
 
-        const canvasPos = network.getPositions([nodeId])[nodeId]
-        const domPos = network.canvasToDOM(canvasPos)
+    network.once('stabilizationIterationsDone', () => {
+      network.setOptions({ physics: false })
+    })
+    network.on('dragStart', () => network.setOptions({ physics: true }))
+    network.on('dragEnd', () => network.setOptions({ physics: false }))
 
-        const PANEL_WIDTH = 280
-        const PANEL_MAX_HEIGHT = 420
-        const bounds = containerRef.current.getBoundingClientRect()
+    network.on('click', (params) => {
+      if (params.nodes.length === 0) {
+        setSelected(null)
+        return
+      }
+      const nodeId = params.nodes[0]
 
-        let x = domPos.x + 18
-        let y = domPos.y
-        if (x + PANEL_WIDTH > bounds.width) {
-          x = domPos.x - PANEL_WIDTH - 18
-        }
-        y = Math.max(0, Math.min(y, bounds.height - PANEL_MAX_HEIGHT))
-        x = Math.max(0, x)
+      let type, id, nodeCaseId
+      if (isAllCases) {
+        const parts = nodeId.split(':')
+        nodeCaseId = parts[0]
+        type = parts[1]
+        id = parts.slice(2).join(':')
+      } else {
+        ;({ type, id, nodeCaseId } = parseSingleCaseNodeId(nodeId, selectedCaseId))
+      }
 
-        setSelected({ type, id, caseId: nodeCaseId, position: { x, y } })
-      })
-    }).catch((e) => setError(e.message))
+      const canvasPos = network.getPositions([nodeId])[nodeId]
+      const domPos = network.canvasToDOM(canvasPos)
+
+      const PANEL_WIDTH = 280
+      const PANEL_MAX_HEIGHT = 420
+      const bounds = containerRef.current.getBoundingClientRect()
+
+      let x = domPos.x + 18
+      let y = domPos.y
+      if (x + PANEL_WIDTH > bounds.width) {
+        x = domPos.x - PANEL_WIDTH - 18
+      }
+      y = Math.max(0, Math.min(y, bounds.height - PANEL_MAX_HEIGHT))
+      x = Math.max(0, x)
+
+      setSelected({ type, id, caseId: nodeCaseId, position: { x, y } })
+    })
 
     return () => {
-      cancelled = true
+      if (networkRef.current) {
+        networkRef.current.destroy()
+        networkRef.current = null
+      }
     }
-  }, [mode, selectedCaseId, refreshKey, bump, visibleCaseIds])
-
-  function handleChanged() {
-    setBump((b) => b + 1)
-    onGraphChanged?.()
-  }
+  }, [graphData, isAllCases, visibleCaseIds, selectedCaseId])
 
   function toggleCaseVisibility(caseId) {
     setVisibleCaseIds(prev => {
@@ -242,9 +217,6 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
       return next
     })
   }
-
-  const isAllCases = mode === 'all-cases'
-  const currentCaseId = isAllCases ? null : selectedCaseId
 
   return (
     <div className="flex flex-col h-full">
