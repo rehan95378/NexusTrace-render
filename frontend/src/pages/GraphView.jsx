@@ -274,7 +274,7 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
         )}
       </div>
 
-      {empty && !error && (
+      {empty && (
         <p className="absolute inset-0 flex items-center justify-center text-light-muted dark:text-muted font-mono text-sm px-4 text-center">
           Canvas empty. Run ingestion in the Ingestion tab first.
         </p>
