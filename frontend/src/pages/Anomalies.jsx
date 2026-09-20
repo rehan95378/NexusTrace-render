@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
-import { useListCases, useAnomalies } from '../hooks/useQueries'
+import { useListCases, useAnomalies, useAllAnomalies } from '../hooks/useQueries'
 
 const LAST_CASE_KEY = 'sih_last_anomalies_case_id'
 
@@ -48,7 +48,13 @@ export default function Anomalies({ refreshKey }) {
 
   // React Query hooks
   const { data: cases = [] } = useListCases()
-  const { data, isLoading, error } = useAnomalies(mode === 'this-case' ? selectedCaseId : null)
+  const { data: caseData, isLoading: isCaseLoading, error: caseError } = useAnomalies(selectedCaseId)
+  const { data: allData, isLoading: isAllLoading, error: allError } = useAllAnomalies()
+
+  const isAllCases = mode === 'all-cases'
+  const data = isAllCases ? allData : caseData
+  const isLoading = isAllCases ? isAllLoading : isCaseLoading
+  const error = isAllCases ? allError : caseError
 
   useEffect(() => {
     if (cases.length > 0) {
@@ -66,8 +72,6 @@ export default function Anomalies({ refreshKey }) {
       localStorage.setItem(LAST_CASE_KEY, selectedCaseId)
     }
   }, [selectedCaseId])
-
-  const isAllCases = mode === 'all-cases'
 
   // Rendered once, directly under the page title and above every Panel
   // below — not nested inside the first panel's card — since it applies

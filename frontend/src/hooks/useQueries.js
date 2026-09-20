@@ -60,12 +60,24 @@ export const useKeyPlayers = (caseId) =>
     enabled: !!caseId,
   })
 
+export const useAllKeyPlayers = () =>
+  useQuery({
+    queryKey: ['key-players', 'all'],
+    queryFn: () => api.keyPlayersAll(),
+  })
+
 // Anomalies
 export const useAnomalies = (caseId) =>
   useQuery({
     queryKey: ['anomalies', caseId],
     queryFn: () => (caseId ? api.anomalies(caseId) : null),
     enabled: !!caseId,
+  })
+
+export const useAllAnomalies = () =>
+  useQuery({
+    queryKey: ['anomalies', 'all'],
+    queryFn: () => api.anomaliesAll(),
   })
 
 // Health
