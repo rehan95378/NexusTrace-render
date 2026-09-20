@@ -54,7 +54,7 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
 
   const isAllCases = mode === 'all-cases'
   const graphData = isAllCases ? allGraphData : caseGraphData
-  const empty = !graphData || graphData.nodes.length === 0
+  const empty = !graphData || !graphData.nodes || graphData.nodes.length === 0
 
   useEffect(() => {
     if (cases.length > 0) {
