@@ -19,10 +19,6 @@ const TABS = [
   { key: 'audit', label: 'Audit Trail', title: 'Tamper-Evident Audit Log' },
 ]
 
-// Tracks window width in state via a resize listener, instead of reading
-// window.innerWidth directly during render (which only ever reflects
-// whatever width happened to be current the last time some *other* state
-// change caused a re-render).
 function useIsMobile(breakpoint = 640) {
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
@@ -44,10 +40,6 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [resetKey, setResetKey] = useState(0)
   const [health, setHealth] = useState(null)
-  // Two separate booleans because "open" means different things at each
-  // size: on mobile the sidebar is an overlay drawer (closed by default),
-  // on desktop it's a persistent column that can be collapsed to free up
-  // space (open by default). One toggle button drives whichever applies.
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(true)
@@ -58,10 +50,6 @@ export default function App() {
     api.health().then(setHealth).catch(() => setHealth({ status: 'unreachable' }))
   }, [])
 
-  // Apply the initial theme class on mount (previously the `dark` class was
-  // only ever toggled inside the click handler, so the default isDarkMode
-  // state never actually got reflected on <html> until the user clicked
-  // the toggle once).
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
@@ -86,7 +74,6 @@ export default function App() {
 
   return (
     <div className="app-shell h-screen overflow-hidden flex flex-col bg-bg text-text">
-      {/* Sidebar Overlay (mobile only) */}
       {sidebarOpen && isMobile && (
         <motion.div
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
@@ -99,35 +86,18 @@ export default function App() {
       )}
 
       {/* Sidebar Navigation — toggleable at every screen size via the
-          button in the topbar, rather than being permanently pinned open
-          on desktop. On mobile it's an overlay drawer; on desktop it's a
-          collapsible column that frees up the full page width when
-          hidden — this replaces what the Graph tab's separate "Fullscreen"
-          mode used to do (see GraphView.jsx). */}
+          single button below. On mobile it's an overlay drawer; on
+          desktop it's a collapsible column that frees up the full page
+          width when hidden. */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-panel border-r border-border flex flex-col
                    transition-transform duration-300 ease-out
                    ${sidebarVisible ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 p-4 border-b border-border flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="text-sm font-mono text-muted tracking-wide">SIH26189</div>
-              <h1 className="font-display text-text text-lg mt-1 truncate">Evidence Graph System</h1>
-            </div>
-            {/* Collapse control lives inside the sidebar itself, so it
-                never shifts position as a side effect of <main>'s padding
-                changing — it's part of the panel that's moving, not a
-                separately-positioned control reacting to that move. */}
-            <button
-              onClick={toggleSidebar}
-              aria-label="Hide sidebar"
-              className="flex-shrink-0 p-1.5 rounded-lg text-muted hover:text-text hover:bg-panel-raised transition-colors duration-200"
-            >
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4">
-                <path d="M10 3L5.5 8l4.5 5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+          <div className="flex-shrink-0 p-4 border-b border-border">
+            <div className="text-sm font-mono text-muted tracking-wide">SIH26189</div>
+            <h1 className="font-display text-text text-lg mt-1 truncate">Evidence Graph System</h1>
           </div>
 
           <nav className="flex-1 overflow-y-auto pt-2">
@@ -156,9 +126,6 @@ export default function App() {
                       </span>
                     ) : (
                       <>
-                        {/* Fixed: these were plain strings before (no
-                            backticks), so `${...}` never interpolated and
-                            the conditional color classes never applied. */}
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${health.status === 'ok' ? 'bg-teal/20 text-teal' : 'bg-danger/20 text-danger'} rounded`}>
                           ● Backend {health.status}
                         </span>
@@ -177,7 +144,6 @@ export default function App() {
                 )}
               </span>
 
-              {/* Theme Toggle */}
               <button
                 className="ml-auto p-1 rounded hover:bg-panel/50 transition-colors duration-200"
                 onClick={() => setIsDarkMode((d) => !d)}
@@ -190,39 +156,42 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Reopen control — only rendered while the sidebar is hidden, at a
-          fixed screen position that never moves. This plus the collapse
-          button inside the sidebar header (above) means the visible
-          control always sits in a stable place for whichever state you're
-          in, rather than one button sliding around as main's padding
-          changes. */}
-      {!sidebarVisible && (
-        <button
-          onClick={toggleSidebar}
-          aria-label="Show sidebar"
-          className="fixed top-4 left-4 z-[60] p-2 bg-panel-raised border border-border rounded-lg text-muted hover:text-text hover:bg-panel transition-colors duration-200 shadow-lg"
+      {/* Single sidebar toggle — one button, one DOM node, for both open
+          and closed states. It's a sibling of <aside> and <main> (fixed to
+          the viewport), so it's never affected by main's pl-64/pl-0
+          padding transition below. Its own `left` offset animates with the
+          SAME duration/easing as the sidebar's own transform, so it
+          visibly rides along the sidebar's edge instead of instantly
+          snapping to a new spot when the state flips. */}
+      <button
+        onClick={toggleSidebar}
+        aria-label={sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}
+        className={`fixed top-4 z-[70] p-2 bg-panel-raised border border-border rounded-lg text-muted hover:text-text hover:bg-panel shadow-lg transition-[left] duration-300 ease-out ${
+          sidebarVisible ? 'left-[228px]' : 'left-4'
+        }`}
+      >
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          className={`w-4 h-4 transition-transform duration-300 ${sidebarVisible ? 'rotate-180' : ''}`}
         >
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4">
-            <path d="M6 3l4.5 5-4.5 5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      )}
+          <path d="M6 3l4.5 5-4.5 5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
 
       {/* Main Content */}
       <main
         className={`flex-1 min-w-0 h-full flex flex-col overflow-hidden transition-[padding] duration-300 ease-out
                    ${!isMobile && sidebarVisible ? 'pl-64' : 'pl-0'}`}
       >
-        {/* Graph tab intentionally shows no topbar at all — case selector,
-            edit control, and the graph itself is the entire page, so every
-            pixel goes to the canvas instead of a repeated title. */}
         {tab !== 'graph' && (
           <div className="topbar flex-shrink-0 flex items-center gap-3 md:gap-4 md:p-4 px-4 py-3 border-b border-border/60">
             <h1 className="font-display text-2xl font-bold text-text md:text-3xl flex-1 min-w-0 truncate">
               {activeTab.title}
             </h1>
 
-            {/* Theme label (desktop only) */}
             {!isMobile && (
               <span className="hidden md:flex items-center gap-2 text-xs font-mono text-muted flex-shrink-0">
                 {isDarkMode ? 'Dark Mode' : 'Light Mode'}
