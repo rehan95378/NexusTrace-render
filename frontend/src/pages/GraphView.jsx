@@ -262,7 +262,7 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
               setSelectedCaseId(e.target.value)
             }
           }}
-          className="px-3 py-2 bg-bg border border-border rounded-lg text-sm font-mono text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg min-w-[220px]"
+          className="px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg min-w-[220px]"
         >
           <option value="">Select a case…</option>
           <option value="__all__">All cases</option>
@@ -274,7 +274,7 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
         </select>
 
         <button
-          className="px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg text-sm"
+          className="px-4 py-2 bg-accent text-accent-content font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg text-sm"
           onClick={() => setEditOpen(true)}
         >
           Edit graph
@@ -282,14 +282,14 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
 
         {isAllCases && cases.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-muted">Show:</span>
+            <span className="text-light-muted dark:text-muted">Show:</span>
             {cases.map((c) => (
               <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={visibleCaseIds.has(c.id)}
                   onChange={() => toggleCaseVisibility(c.id)}
-                  className="h-4 w-4 text-accent bg-bg border border-border rounded focus:ring-accent"
+                  className="h-4 w-4 text-accent bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded focus:ring-accent"
                 />
                 {c.name}
               </label>
@@ -304,9 +304,9 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
         </div>
       )}
 
-      <div className="relative flex-1 min-h-0 rounded-lg overflow-hidden bg-bg border border-border">
+      <div className="relative flex-1 min-h-0 rounded-lg overflow-hidden bg-light-bg dark:bg-bg border border-light-border dark:border-border">
         {empty && !error && (
-          <p className="absolute inset-0 flex items-center justify-center text-muted font-mono text-sm px-4 text-center">
+          <p className="absolute inset-0 flex items-center justify-center text-light-muted dark:text-muted font-mono text-sm px-4 text-center">
             Canvas empty. Run ingestion in the Ingestion tab first.
           </p>
         )}
