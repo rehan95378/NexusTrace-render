@@ -274,12 +274,12 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
         )}
       </div>
 
-      {empty && (
-        <p className="absolute inset-0 flex items-center justify-center text-light-muted dark:text-muted font-mono text-sm px-4 text-center">
-          Canvas empty. Run ingestion in the Ingestion tab first.
-        </p>
-      )}
       <div className="relative flex-1 min-h-0 rounded-lg overflow-hidden bg-light-bg dark:bg-bg border border-light-border dark:border-border">
+        {empty && (
+          <p className="absolute inset-0 flex items-center justify-center text-light-muted dark:text-muted font-mono text-sm px-4 text-center pointer-events-none">
+            Canvas empty. Run ingestion in the Ingestion tab first.
+          </p>
+        )}
         <div id="graph-canvas" ref={containerRef} className="w-full h-full" />
         {selected && (
           <NodeDetailsPanel
