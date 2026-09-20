@@ -82,3 +82,71 @@ export const useAuditTrail = () =>
     queryKey: ['audit-trail'],
     queryFn: () => api.auditAll(),
   })
+
+// Graph Editing
+export const useAddNode = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ caseId, type, value }) => api.addNode(caseId, type, value),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+    },
+  })
+}
+
+export const useAddEdge = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ caseId, sourceId, targetId, label }) =>
+      api.addEdge(caseId, sourceId, targetId, label),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+    },
+  })
+}
+
+export const useDeleteNode = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ caseId, nodeId }) => api.deleteNode(caseId, nodeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+    },
+  })
+}
+
+export const useDeleteEdge = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ caseId, edgeId }) => api.deleteEdge(caseId, edgeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+    },
+  })
+}
+
+// Ingestion
+export const useIngest = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ caseId, firText, cdrText, appendMode }) =>
+      api.ingest(caseId, firText, cdrText, appendMode),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['entities'] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
+}
+
+export const useClearCase = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (caseId) => api.clearCase(caseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['graph'] })
+      queryClient.invalidateQueries({ queryKey: ['entities'] })
+      queryClient.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
+}
