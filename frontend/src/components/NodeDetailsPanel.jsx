@@ -1,12 +1,75 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 
+const TYPE_COLORS = {
+  Person: '#E3A008',
+  Location: '#2FA8A0',
+  Vehicle: '#5B8DEF',
+  Phone: '#B076E0',
+  Organization: '#6FCF6F',
+}
+
+function TypeBadge({ type }) {
+  const color = TYPE_COLORS[type] || '#8A8A8A'
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono font-medium uppercase tracking-wide"
+      style={{ backgroundColor: `${color}22`, color }}
+    >
+      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+      {type}
+    </span>
+  )
+}
+
+function Section({ label, count, children }) {
+  if (!count) return null
+  return (
+    <details className="group py-1">
+      <summary className="flex items-center justify-between py-1.5 cursor-pointer select-none text-xs font-medium text-muted hover:text-text transition-colors">
+        <span className="flex items-center gap-1.5">
+          <svg viewBox="0 0 10 10" className="w-2.5 h-2.5 transition-transform group-open:rotate-90" fill="currentColor">
+            <path d="M2 1l5 4-5 4z" />
+          </svg>
+          {label}
+        </span>
+        <span className="text-[10px] font-mono text-muted/70">{count}</span>
+      </summary>
+      <div className="pl-4 pb-1 space-y-1">{children}</div>
+    </details>
+  )
+}
+
+function RelRow({ direction, r }) {
+  const targetType = r.target_type || r.source_type
+  const targetId = r.target_id || r.source_id
+  const color = TYPE_COLORS[targetType] || '#8A8A8A'
+  const caseTag = r.target_case_id || r.source_case_id
+  const confidence = r.confidence ? Math.round(r.confidence * 100) : null
+  return (
+    <div className="flex items-start gap-2 text-xs py-1">
+      <span className="text-muted/60 font-mono mt-0.5">{direction === 'out' ? '→' : '←'}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-mono text-[10px] text-muted uppercase">{r.rel_type}</span>
+          <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+          <span className="text-text truncate">{targetId}</span>
+        </div>
+        {(caseTag || confidence) && (
+          <div className="text-[10px] font-mono text-muted/70 mt-0.5">
+            {confidence ? `${confidence}% confidence` : ''}
+            {caseTag ? `${confidence ? ' · ' : ''}case ${caseTag}` : ''}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /**
- * Inline popup anchored to a clicked graph node (via vis-network's
- * canvasToDOM). Read-only: shows the node's value, all properties,
- * relationships (within-case and cross-case), and audit trail.
- * All editing (rename/delete/merge/create) now lives in the separate
- * "Edit graph" panel (GraphEditPanel.jsx), not here.
+ * Inline popup anchored to a clicked graph node. Read-only: value,
+ * properties, relationships (in-case + cross-case), audit trail.
+ * Editing lives in GraphEditPanel.jsx, not here.
  */
 export default function NodeDetailsPanel({ caseId, type, id, position, onClose }) {
   const [detail, setDetail] = useState(null)
@@ -18,149 +81,93 @@ export default function NodeDetailsPanel({ caseId, type, id, position, onClose }
     api.entityDetail(caseId, type, id).then(setDetail).catch((e) => setError(e.message))
   }, [caseId, type, id])
 
-  function formatRel(r) {
-    const confidence = r.confidence ? ` (${Math.round(r.confidence * 100)}%)` : ''
-    const caseInfo = r.target_case_id ? ` [case: ${r.target_case_id}]` : (r.source_case_id ? ` [case: ${r.source_case_id}]` : '')
-    return (
-      <div className="text-sm font-mono text-muted whitespace-normal break-all">
-        {r.rel_type} {r.target_id ? '→' : '←'} {r.target_type || r.source_type}: {r.target_id || r.source_id}{confidence}{caseInfo}
-      </div>
-    )
-  }
+  const color = TYPE_COLORS[type] || '#8A8A8A'
+  const hasAnyRelationship =
+    detail?.outgoing?.length || detail?.incoming?.length ||
+    detail?.cross_outgoing?.length || detail?.cross_incoming?.length
 
   return (
     <div
-      className="fixed z-20 w-[280px] max-h-[420px] overflow-y-auto bg-panel-raised border border-border border-l-3 border-accent rounded-lg p-4 shadow-lg transform-gpu"
-      // Fixed: previously these were Tailwind arbitrary-value classes built
-      // with plain strings (no backticks), e.g. `left-[calc({position.x}px+18px)]`,
-      // so `{position.x}` was never interpolated — it rendered as literal,
-      // invalid CSS that the browser ignored, and the popup never actually
-      // moved to the clicked node. Even with backticks fixed, Tailwind's
-      // static JIT scanner can't pick up class names assembled at runtime
-      // from JS values, so this has to be a real inline style instead.
-      style={{ left: position.x, top: position.y }}
+      className="fixed z-20 w-[300px] max-h-[440px] overflow-y-auto bg-panel-raised border border-border rounded-lg shadow-elevated"
+      // left/top must stay inline: Tailwind's JIT scanner can't pick up
+      // class names built at runtime from JS values (position.x/y).
+      style={{ left: position.x, top: position.y, borderTopColor: color, borderTopWidth: '2px' }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-mono text-xs text-muted text-uppercase tracking-wider">{type}</span>
-        <button className="text-muted hover:text-text transition-colors duration-200" onClick={onClose}>×</button>
+      <div className="sticky top-0 bg-panel-raised px-4 pt-3 pb-2 border-b border-border/60 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <TypeBadge type={type} />
+          {detail && (
+            <h3 className="font-display text-base font-semibold text-text mt-1.5 leading-tight break-words">
+              {detail.value}
+            </h3>
+          )}
+        </div>
+        <button
+          className="flex-shrink-0 text-muted hover:text-text transition-colors text-lg leading-none mt-0.5"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
       </div>
 
-      {error && <div className="bg-danger/10 text-danger border border-danger/30 rounded-lg p-2 mb-2 text-sm font-mono">{error}</div>}
-      {!detail && !error && <p className="text-center py-8 text-muted font-mono">Loading…</p>}
-
-      {detail && (
-        <>
-          <h3 className="font-display text-lg mb-2 break-all whitespace-normal">{detail.value}</h3>
-          <div className="flex flex-wrap gap-2 mb-2">
-            <span className="bg-panel-raised border border-border rounded px-2 py-0.5 text-xs font-mono"><strong>ID:</strong> {detail.id}</span>
-            <span className="bg-panel-raised border border-border rounded px-2 py-0.5 text-xs font-mono"><strong>Case:</strong> {detail.case_name || detail.case_id}</span>
+      <div className="px-4 py-3">
+        {error && (
+          <div className="bg-danger/10 text-danger border border-danger/30 rounded-lg p-2 text-xs font-mono">
+            {error}
           </div>
+        )}
+        {!detail && !error && (
+          <p className="text-center py-6 text-muted text-xs font-mono">Loading…</p>
+        )}
 
-          {/* All Properties Section */}
-          {detail.all_props && Object.keys(detail.all_props).length > 0 && (
-            <details className="mb-2">
-              <summary className="flex items-center justify-between bg-panel-raised border border-border rounded px-2 py-1 cursor-pointer font-medium text-text">
-                All Properties
-              </summary>
-              <div className="mt-2 space-y-1">
-                {Object.entries(detail.all_props).map(([key, val]) => (
-                  <div key={key} className="flex justify-between text-sm">
-                    <span className="font-mono text-accent">{key}:</span>
-                    <span className="text-text">{val}</span>
+        {detail && (
+          <>
+            <div className="text-[11px] font-mono text-muted mb-3">
+              {detail.case_name || detail.case_id}
+            </div>
+
+            <div className="divide-y divide-border/40">
+              <Section label="Properties" count={detail.all_props ? Object.keys(detail.all_props).length : 0}>
+                {detail.all_props && Object.entries(detail.all_props).map(([key, val]) => (
+                  <div key={key} className="flex justify-between gap-2 text-xs py-0.5">
+                    <span className="font-mono text-muted">{key}</span>
+                    <span className="text-text text-right break-all">{String(val)}</span>
                   </div>
                 ))}
-              </div>
-            </details>
-          )}
+              </Section>
 
-          {/* Within-Case Outgoing Relationships */}
-          {detail.outgoing && detail.outgoing.length > 0 && (
-            <details className="mb-2">
-              <summary className="flex items-center justify-between bg-panel-raised border border-border rounded px-2 py-1 cursor-pointer font-medium text-text">
-                Outgoing ({detail.outgoing.length})
-              </summary>
-              <div className="mt-2 space-y-1">
-                {detail.outgoing.map((r, index) => (
-                  <div key={index} className="border-b border-border/50 pb-1 mb-1 last:border-0 last:mb-0">
-                    {formatRel(r)}
+              <Section label="Connections" count={(detail.outgoing?.length || 0) + (detail.incoming?.length || 0)}>
+                {detail.outgoing?.map((r, i) => <RelRow key={`o${i}`} direction="out" r={r} />)}
+                {detail.incoming?.map((r, i) => <RelRow key={`i${i}`} direction="in" r={r} />)}
+              </Section>
+
+              <Section
+                label="Cross-case links"
+                count={(detail.cross_outgoing?.length || 0) + (detail.cross_incoming?.length || 0)}
+              >
+                {detail.cross_outgoing?.map((r, i) => <RelRow key={`co${i}`} direction="out" r={r} />)}
+                {detail.cross_incoming?.map((r, i) => <RelRow key={`ci${i}`} direction="in" r={r} />)}
+              </Section>
+
+              <Section label="Recent activity" count={detail.audit_trail?.length || 0}>
+                {detail.audit_trail?.map((a, i) => (
+                  <div key={i} className="flex items-baseline justify-between text-[11px] py-0.5 gap-2">
+                    <span className="font-mono text-muted uppercase truncate">{a.action}</span>
+                    <span className="font-mono text-muted/60 flex-shrink-0">
+                      {new Date(a.timestamp).toLocaleDateString()}
+                    </span>
                   </div>
                 ))}
-              </div>
-            </details>
-          )}
+              </Section>
+            </div>
 
-          {/* Within-Case Incoming Relationships */}
-          {detail.incoming && detail.incoming.length > 0 && (
-            <details className="mb-2">
-              <summary className="flex items-center justify-between bg-panel-raised border border-border rounded px-2 py-1 cursor-pointer font-medium text-text">
-                Incoming ({detail.incoming.length})
-              </summary>
-              <div className="mt-2 space-y-1">
-                {detail.incoming.map((r, index) => (
-                  <div key={index} className="border-b border-border/50 pb-1 mb-1 last:border-0 last:mb-0">
-                    {formatRel(r)}
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
-
-          {/* Cross-Case Outgoing Relationships */}
-          {detail.cross_outgoing && detail.cross_outgoing.length > 0 && (
-            <details className="mb-2">
-              <summary className="flex items-center justify-between bg-panel-raised border border-border rounded px-2 py-1 cursor-pointer font-medium text-text">
-                Cross-Case Outgoing ({detail.cross_outgoing.length})
-              </summary>
-              <div className="mt-2 space-y-1">
-                {detail.cross_outgoing.map((r, index) => (
-                  <div key={index} className="border-b border-border/50 pb-1 mb-1 last:border-0 last:mb-0">
-                    {formatRel(r)}
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
-
-          {/* Cross-Case Incoming Relationships */}
-          {detail.cross_incoming && detail.cross_incoming.length > 0 && (
-            <details className="mb-2">
-              <summary className="flex items-center justify-between bg-panel-raised border border-border rounded px-2 py-1 cursor-pointer font-medium text-text">
-                Cross-Case Incoming ({detail.cross_incoming.length})
-              </summary>
-              <div className="mt-2 space-y-1">
-                {detail.cross_incoming.map((r, index) => (
-                  <div key={index} className="border-b border-border/50 pb-1 mb-1 last:border-0 last:mb-0">
-                    {formatRel(r)}
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
-
-          {/* No relationships at all */}
-          {(!detail.outgoing?.length && !detail.incoming?.length && !detail.cross_outgoing?.length && !detail.cross_incoming?.length) && (
-            <p className="text-center py-4 text-muted font-mono italic">No relationships yet.</p>
-          )}
-
-          {/* Audit Trail */}
-          {detail.audit_trail && detail.audit_trail.length > 0 && (
-            <details className="mb-2">
-              <summary className="flex items-center justify-between bg-panel-raised border border-border rounded px-2 py-1 cursor-pointer font-medium text-text">
-                Recent Activity ({detail.audit_trail.length})
-              </summary>
-              <div className="mt-2 space-y-1">
-                {detail.audit_trail.map((a, i) => (
-                  <div key={i} className="flex justify-between text-xs font-mono text-muted py-0.5">
-                    <span className="font-mono text-uppercase">{a.action}</span>
-                    <span>{new Date(a.timestamp).toLocaleString()}</span>
-                    {a.details && <span className="break-all whitespace-normal text-text">{JSON.stringify(a.details)}</span>}
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
-        </>
-      )}
+            {!hasAnyRelationship && (
+              <p className="text-center py-3 text-muted text-xs font-mono italic">No relationships yet.</p>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
