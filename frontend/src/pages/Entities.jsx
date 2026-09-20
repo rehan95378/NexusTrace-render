@@ -3,12 +3,59 @@ import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
 import { api } from '../api'
 
+// Minimal inline line icons (currentColor, no external icon library) —
+// replaces the previous emoji icons (👤📍🚗📱🏢), which read as a generic
+// "AI-generated dashboard" pattern rather than a deliberately designed one.
+function PersonIcon(props) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <circle cx="8" cy="5" r="2.6" />
+      <path d="M2.5 13.5c0-2.7 2.5-4.5 5.5-4.5s5.5 1.8 5.5 4.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+function PinIcon(props) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <path d="M8 14.5S13 9.9 13 6.3A5 5 0 003 6.3C3 9.9 8 14.5 8 14.5z" strokeLinejoin="round" />
+      <circle cx="8" cy="6.3" r="1.7" />
+    </svg>
+  )
+}
+function CarIcon(props) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <path d="M2.5 10V8.2l1.4-3.1a1 1 0 01.9-.6h6.4a1 1 0 01.9.6L13.5 8.2V10" strokeLinejoin="round" />
+      <rect x="2" y="10" width="12" height="2.6" rx="0.6" />
+      <circle cx="4.6" cy="12.6" r="1" />
+      <circle cx="11.4" cy="12.6" r="1" />
+    </svg>
+  )
+}
+function PhoneIcon(props) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <rect x="4.5" y="1.5" width="7" height="13" rx="1.3" />
+      <path d="M7 12.3h2" strokeLinecap="round" />
+    </svg>
+  )
+}
+function BuildingIcon(props) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
+      <rect x="2.5" y="3" width="7" height="11" />
+      <rect x="10.2" y="6.5" width="3.3" height="7.5" />
+      <path d="M4.3 5.2h1M4.3 7.6h1M4.3 10h1M6.7 5.2h1M6.7 7.6h1M6.7 10h1" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 const ENTITY_TYPES = [
-  { key: 'people', label: 'Suspects', color: 'accent', icon: '👤' },
-  { key: 'locations', label: 'Hotspots', color: 'teal', icon: '📍' },
-  { key: 'vehicles', label: 'Vehicles', color: 'blue', icon: '🚗' },
-  { key: 'phones', label: 'Devices', color: 'purple', icon: '📱' },
-  { key: 'organizations', label: 'Organizations', color: 'green', icon: '🏢' },
+  { key: 'people', label: 'Suspects', color: 'accent', Icon: PersonIcon },
+  { key: 'locations', label: 'Hotspots', color: 'teal', Icon: PinIcon },
+  { key: 'vehicles', label: 'Vehicles', color: 'blue', Icon: CarIcon },
+  { key: 'phones', label: 'Devices', color: 'purple', Icon: PhoneIcon },
+  { key: 'organizations', label: 'Organizations', color: 'green', Icon: BuildingIcon },
 ]
 
 // NOTE: hover classes are listed here as full, static literal strings
@@ -284,7 +331,7 @@ export default function Entities({ refreshKey }) {
             >
               <div className="bg-panel-raised/50 border border-border/50 rounded-lg p-4 h-full">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted mb-3">
-                  <span className="text-lg">{type.icon}</span>
+                  <type.Icon className={`w-4 h-4 ${COLOR_CLASSES[type.color].text}`} />
                   <span className="text-text">{type.label}</span>
                   <span className="ml-auto px-2 py-0.5 bg-bg rounded text-xs font-mono text-muted">
                     {data[type.key]?.length || 0}
@@ -292,7 +339,7 @@ export default function Entities({ refreshKey }) {
                 </div>
                 <div className="flex flex-wrap gap-1.5 min-h-[80px]">
                   {(!data[type.key] || data[type.key].length === 0) && (
-                    <span className="text-xs text-muted/60 italic w-full">None yet</span>
+                    <span className="text-xs text-muted/60 italic w-full">No records extracted for this case yet.</span>
                   )}
                   {data[type.key]?.map((item, itemIndex) => (
                     <motion.span
