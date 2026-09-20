@@ -1,43 +1,34 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
-import { api } from '../api'
+import { useListCases, useKeyPlayers } from '../hooks/useQueries'
 
 const LAST_CASE_KEY = 'sih_last_keyplayers_case_id'
 
 export default function KeyPlayers({ refreshKey }) {
   const [mode, setMode] = useState('this-case')
-  const [cases, setCases] = useState([])
   const [selectedCaseId, setSelectedCaseId] = useState('')
-  const [data, setData] = useState(null)
-  const [error, setError] = useState(null)
+
+  // React Query hooks
+  const { data: cases = [] } = useListCases()
+  const { data, isLoading, error } = useKeyPlayers(selectedCaseId)
 
   useEffect(() => {
-    api.listCases().then((list) => {
-      setCases(list)
+    if (cases.length > 0) {
       const lastId = localStorage.getItem(LAST_CASE_KEY)
-      if (lastId && list.find(c => c.id === lastId)) {
+      if (lastId && cases.find(c => c.id === lastId)) {
         setSelectedCaseId(lastId)
+      } else {
+        setSelectedCaseId(cases[0].id)
       }
-    })
-  }, [])
+    }
+  }, [cases])
 
   useEffect(() => {
     if (selectedCaseId) {
       localStorage.setItem(LAST_CASE_KEY, selectedCaseId)
     }
   }, [selectedCaseId])
-
-  useEffect(() => {
-    setData(null)
-    setError(null)
-
-    if (mode === 'all-cases') {
-      api.keyPlayersAll().then(setData).catch((e) => setError(e.message))
-    } else if (selectedCaseId) {
-      api.keyPlayers(selectedCaseId).then(setData).catch((e) => setError(e.message))
-    }
-  }, [mode, selectedCaseId, refreshKey])
 
   const isAllCases = mode === 'all-cases'
 
@@ -64,7 +55,7 @@ export default function KeyPlayers({ refreshKey }) {
           </option>
         ))}
       </select>
-      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error}</div>
+      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error?.message}</div>
     </Panel>
   )
 
@@ -130,7 +121,7 @@ export default function KeyPlayers({ refreshKey }) {
   )
 
   if (error) return renderError()
-  if (!data) return renderLoading()
+  if (isLoading || !data) return renderLoading()
   if (data && data.message && !data.ranked) return renderNoData()
 
   return (

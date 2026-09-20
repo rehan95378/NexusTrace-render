@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { useUIStore } from './store/uiStore'
 import { api } from './api'
 import Cases from './pages/Cases'
 import Ingestion from './pages/Ingestion'
@@ -36,8 +37,6 @@ function useIsMobile(breakpoint = 640) {
 }
 
 function SidebarPanelIcon(props) {
-  // A simple "sidebar" glyph: outer rect + a vertical divider near the
-  // left edge, mirroring the icon Claude's own collapse button uses.
   return (
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" {...props}>
       <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.75" />
@@ -46,12 +45,6 @@ function SidebarPanelIcon(props) {
   )
 }
 
-/**
- * Icon + wordmark shown together only inside the sidebar's own header,
- * while the sidebar is open. When the sidebar is closed, only the bare
- * toggle icon is shown (in the main content's header row, below) — no
- * wordmark — matching Claude's own collapsed-sidebar look.
- */
 function BrandRow({ onToggle }) {
   return (
     <div className="flex items-center gap-2 flex-shrink-0">
@@ -73,8 +66,7 @@ export default function App() {
   const [resetKey, setResetKey] = useState(0)
   const [health, setHealth] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false) // Light mode is default
+  const { isDarkMode, toggleDarkMode, sidebarCollapsed, setSidebarCollapsed } = useUIStore()
   const isMobile = useIsMobile()
   const sidebarVisible = isMobile ? sidebarOpen : !sidebarCollapsed
 
@@ -86,7 +78,6 @@ export default function App() {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
 
-  // Ctrl+B / Cmd+B toggles the sidebar from anywhere, same as Claude's own UI.
   useEffect(() => {
     function onKeyDown(e) {
       const key = e.key?.toLowerCase()
@@ -97,7 +88,6 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile])
 
   const bumpRefresh = () => setRefreshKey((k) => k + 1)
@@ -114,7 +104,7 @@ export default function App() {
     if (isMobile) {
       setSidebarOpen((o) => !o)
     } else {
-      setSidebarCollapsed((c) => !c)
+      setSidebarCollapsed(!sidebarCollapsed)
     }
   }
 
@@ -131,12 +121,6 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar Navigation — toggleable at every screen size. On mobile
-          it's an overlay drawer; on desktop it's a collapsible column
-          that frees up the full page width when hidden. Its header row
-          holds the toggle button and wordmark as ordinary flex content —
-          no fixed positioning, so nothing else on the page needs special
-          padding to avoid it. */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-light-panel dark:bg-panel border-r border-light-border dark:border-border flex flex-col
                    transition-transform duration-300 ease-out
@@ -185,15 +169,15 @@ export default function App() {
                     )}
                   </>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted/20 text-muted rounded">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-light-muted/20 dark:bg-muted/20 text-light-muted dark:text-muted rounded">
                     ● Checking...
                   </span>
                 )}
               </span>
 
               <button
-                className="ml-auto p-1 rounded hover:bg-panel/50 transition-colors duration-200"
-                onClick={() => setIsDarkMode((d) => !d)}
+                className="ml-auto p-1 rounded hover:bg-light-panel-raised dark:hover:bg-panel/50 transition-colors duration-200"
+                onClick={() => toggleDarkMode()}
                 aria-label="Toggle dark/light mode"
               >
                 {isDarkMode ? '☀️' : '🌙'}
@@ -203,16 +187,10 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main
         className={`flex-1 min-w-0 h-full flex flex-col overflow-hidden transition-[padding] duration-300 ease-out
                    ${!isMobile && sidebarVisible ? 'pl-64' : 'pl-0'}`}
       >
-        {/* Only non-graph tabs get this header row (title + toggle icon
-            when the sidebar is closed). The graph tab has no title and
-            deliberately gets zero extra header bar — its own toggle icon
-            (when needed) is squeezed into GraphView's existing controls
-            row below instead, so the canvas loses no vertical space. */}
         {tab !== 'graph' && (
           <div className="topbar flex-shrink-0 flex items-center gap-3 py-3 px-4 border-b border-light-border/60 dark:border-border/60 bg-light-panel dark:bg-panel">
             {!sidebarVisible && (
@@ -245,9 +223,7 @@ export default function App() {
           }
         >
           {tab === 'cases' && <Cases onNavigateToIngestion={() => selectTab('ingestion')} />}
-          {tab === 'ingestion' && (
-            <Ingestion key={resetKey} onIngested={bumpRefresh} />
-          )}
+          {tab === 'ingestion' && <Ingestion key={resetKey} onIngested={bumpRefresh} />}
           {tab === 'entities' && <Entities refreshKey={refreshKey} />}
           {tab === 'graph' && (
             <GraphView
@@ -258,7 +234,7 @@ export default function App() {
                   <button
                     onClick={toggleSidebar}
                     aria-label="Show sidebar"
-                    className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-md text-muted hover:text-text hover:bg-panel-raised transition-colors duration-150"
+                    className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-md text-light-muted dark:text-muted hover:text-light-text dark:hover:text-text hover:bg-light-panel-raised dark:hover:bg-panel-raised transition-colors duration-150"
                   >
                     <SidebarPanelIcon className="w-4 h-4" />
                   </button>

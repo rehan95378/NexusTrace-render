@@ -1,48 +1,51 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
-import { api } from '../api'
+import { useListCases, useCreateCase, useDeleteCase } from '../hooks/useQueries'
+import { useCaseStore } from '../store/caseStore'
 
 /**
  * Cases tab — case management (list, create, delete).
- * No longer a blocking gate; just a regular tab reachable any time.
+ * Uses React Query for data fetching and Zustand for case selection.
  */
 export default function Cases({ onNavigateToIngestion }) {
-  const [cases, setCases] = useState(null)
-  const [error, setError] = useState(null)
   const [newName, setNewName] = useState('')
-  const [creating, setCreating] = useState(false)
+  const [localError, setLocalError] = useState(null)
 
-  function loadCases() {
-    api.listCases().then(setCases).catch((e) => setError(e.message))
-  }
+  // React Query hooks
+  const { data: cases = [], isLoading, error: queryError } = useListCases()
+  const createMutation = useCreateCase()
+  const deleteMutation = useDeleteCase()
 
-  useEffect(loadCases, [])
+  // Zustand store
+  const { selectCase } = useCaseStore()
+
+  const error = localError || queryError?.message
 
   async function handleCreate(e) {
     e.preventDefault()
     if (!newName.trim()) return
-    setCreating(true)
+    setLocalError(null)
     try {
-      await api.createCase(newName.trim())
+      await createMutation.mutateAsync(newName.trim())
       setNewName('')
-      loadCases()
     } catch (err) {
-      setError(err.message)
-    } finally {
-      setCreating(false)
+      setLocalError(err.message || 'Failed to create case')
     }
   }
 
   async function handleDelete(caseId, caseName) {
     if (!window.confirm(`Permanently delete "${caseName}" and everything in it?`)) return
+    setLocalError(null)
     try {
-      await api.deleteCase(caseId)
-      loadCases()
+      await deleteMutation.mutateAsync(caseId)
     } catch (err) {
-      setError(err.message)
+      setLocalError(err.message || 'Failed to delete case')
     }
   }
+
+  const isCreating = createMutation.isPending
+  const isDeleting = deleteMutation.isPending
 
   return (
     <div className="space-y-6">
@@ -74,17 +77,17 @@ export default function Cases({ onNavigateToIngestion }) {
           />
           <button
             type="submit"
-            disabled={creating || !newName.trim()}
+            disabled={isCreating || !newName.trim()}
             className="px-5 py-2.5 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg"
           >
-            {creating ? 'Creating…' : 'New Case'}
+            {isCreating ? 'Creating…' : 'New Case'}
           </button>
         </form>
 
-        {!cases && !error && (
+        {isLoading && !cases.length && (
           <p className="text-light-muted dark:text-muted text-center py-8">Loading cases…</p>
         )}
-        {cases && cases.length === 0 && (
+        {cases.length === 0 && !isLoading && (
           <motion.p
             className="text-light-muted dark:text-muted text-center py-8"
             initial={{ opacity: 0 }}
@@ -94,7 +97,7 @@ export default function Cases({ onNavigateToIngestion }) {
           </motion.p>
         )}
 
-        {cases && cases.length > 0 && (
+        {cases.length > 0 && (
           <motion.div
             className="overflow-x-auto"
             initial={{ opacity: 0, y: 10 }}
@@ -117,7 +120,7 @@ export default function Cases({ onNavigateToIngestion }) {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="border-b border-light-border dark:border-border/50 hover:bg-light-panel-raised dark:bg-light-panel dark:bg-panel-raised/50 transition-colors"
+                    className="border-b border-light-border dark:border-border/50 hover:bg-light-panel-raised dark:hover:bg-panel-raised/50 transition-colors"
                   >
                     <td className="py-4 font-medium text-light-text dark:text-text">{c.name}</td>
                     <td className="py-4 text-light-muted dark:text-muted">
@@ -130,15 +133,19 @@ export default function Cases({ onNavigateToIngestion }) {
                       <div className="flex flex-col sm:flex-row gap-2">
                         <button
                           className="flex-1 px-3 py-1.5 bg-accent text-[#14100a] font-semibold rounded-lg hover:bg-accent/90 transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg"
-                          onClick={onNavigateToIngestion}
+                          onClick={() => {
+                            selectCase(c.id)
+                            onNavigateToIngestion()
+                          }}
                         >
                           Open in Ingestion
                         </button>
                         <button
-                          className="flex-1 px-3 py-1.5 border border-danger text-danger rounded-lg hover:bg-danger/10 transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg"
+                          disabled={isDeleting}
+                          className="flex-1 px-3 py-1.5 border border-danger text-danger rounded-lg hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg"
                           onClick={() => handleDelete(c.id, c.name)}
                         >
-                          Delete
+                          {isDeleting ? 'Deleting…' : 'Delete'}
                         </button>
                       </div>
                     </td>

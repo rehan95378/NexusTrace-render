@@ -1,19 +1,13 @@
-import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Panel from '../components/Panel'
-import { api } from '../api'
+import { useAuditTrail } from '../hooks/useQueries'
 
 export default function AuditTrail({ refreshKey }) {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    api.auditAll().then(setData).catch((e) => setError(e.message))
-  }, [refreshKey])
+  const { data, isLoading, error } = useAuditTrail()
 
   const renderError = () => (
     <Panel title="Tamper-Evident Audit Log">
-      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error}</div>
+      <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-sm">{error?.message}</div>
     </Panel>
   )
 
@@ -32,7 +26,7 @@ export default function AuditTrail({ refreshKey }) {
   return (
     <>
       {error && renderError()}
-      {!error && !data && renderLoading()}
+      {!error && (isLoading || !data) && renderLoading()}
       {data && (
         <Panel>
           {/* Per-case verification status */}
