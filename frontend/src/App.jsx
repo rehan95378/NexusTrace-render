@@ -4,7 +4,7 @@ import { api } from './api'
 import Cases from './pages/Cases'
 import Ingestion from './pages/Ingestion'
 import Entities from './pages/Entities'
-import GraphViewCytoscape from './pages/GraphView'
+import GraphView from './pages/GraphView'
 import KeyPlayers from './pages/KeyPlayers'
 import Anomalies from './pages/Anomalies'
 import AuditTrail from './pages/AuditTrail'
@@ -250,7 +250,7 @@ export default function App() {
           {tab === 'ingestion' && <Ingestion key={resetKey} onIngested={bumpRefresh} />}
           {tab === 'entities' && <Entities refreshKey={refreshKey} />}
           {tab === 'graph' && (
-            <GraphViewCytoscape
+            <GraphView
               refreshKey={refreshKey}
               onGraphChanged={bumpRefresh}
               sidebarToggle={
