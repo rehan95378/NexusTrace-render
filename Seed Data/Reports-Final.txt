@@ -1,0 +1,77 @@
+=== CASE 01 ===
+=== REPORT 1 ===
+Rahul Sharma contacted Amit Kumar.
+Rahul Sharma transferred money to Amit Kumar.
+Rahul Sharma called Amit Kumar.
+Rahul Sharma was at Dadar Station.
+Amit Kumar owns car MH04AB1234.
+Rahul Sharma uses phone 9876543210.
+Amit Kumar uses phone 9654321890.
+Shiva Transport Ltd handles operations.
+
+=== REPORT 2 ===
+Amit Kumar contacted Suresh Patel.
+Amit Kumar transferred money to Suresh Patel.
+Amit Kumar called Suresh Patel.
+Amit Kumar was at Bandra Terminus.
+Suresh Patel owns car MH05CD5678.
+Suresh Patel uses phone 9654321890.
+Shiva Transport Ltd handles funds.
+
+=== REPORT 3 ===
+Neeta Menon contacted Rahul Sharma.
+Neeta Menon transferred money to Rahul Sharma.
+Neeta Menon called Rahul Sharma.
+Neeta Menon was at Andheri Station.
+Rahul Sharma owns car MH06EF9012.
+Neeta Menon uses phone 9988776655.
+Nova Digital Solutions handles transfers.
+
+=== CASE 02 ===
+=== REPORT 1 ===
+Priyanka Desai contacted Suresh Patel.
+Priyanka Desai transferred money to Suresh Patel.
+Priyanka Desai called Suresh Patel.
+Priyanka Desai was at India Gate.
+Suresh Patel uses phone 9654321890.
+Priyanka Desai uses phone 9432176890.
+Shiva Transport Ltd is involved.
+
+=== REPORT 2 ===
+Anand Kumar contacted Priyanka Desai.
+Anand Kumar transferred money to Priyanka Desai.
+Anand Kumar called Priyanka Desai.
+Anand Kumar was at Red Fort.
+Anand Kumar owns car DL14KL9922.
+Anand Kumar uses phone 9321876543.
+Sunrise Sports Consultancy is involved.
+
+=== CASE 03 ===
+=== REPORT 1 ===
+Kallol Ghosh contacted Suresh Patel.
+Kallol Ghosh transferred money to Suresh Patel.
+Kallol Ghosh called Suresh Patel.
+Kallol Ghosh was at Howrah Station.
+Kallol Ghosh owns car WB02ST3344.
+Kallol Ghosh uses phone 9434556677.
+Suresh Patel uses phone 9654321890.
+Omega Finance Corp handles transfers.
+
+=== REPORT 2 ===
+Kallol Ghosh contacted Anand Kumar.
+Kallol Ghosh transferred money to Anand Kumar.
+Kallol Ghosh called Anand Kumar.
+Kallol Ghosh was at Sealdah Station.
+Anand Kumar uses phone 9321876543.
+Omega Finance Corp is involved.
+
+=== CASE 04 ===
+=== REPORT 1 ===
+Manish Bhatt contacted Anand Kumar.
+Manish Bhatt transferred money to Anand Kumar.
+Manish Bhatt called Anand Kumar.
+Manish Bhatt was at Ahmedabad Railway Station.
+Manish Bhatt owns car GJ01UV8899.
+Manish Bhatt uses phone 9012345678.
+Anand Kumar uses phone 9321876543.
+Sunrise Sports Consultancy handles arrangements.
