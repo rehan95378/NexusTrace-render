@@ -36,6 +36,23 @@ function useIsMobile(breakpoint = 640) {
 
   return isMobile
 }
+// // Refit when the canvas is resized (sidebar toggle, window resize, fullscreen)
+// useEffect(() => {
+//   if (!containerRef.current) return
+//   let timer
+//   const observer = new ResizeObserver(() => {
+//     clearTimeout(timer)
+//     timer = setTimeout(() => {
+//       networkRef.current?.redraw()
+//       networkRef.current?.fit({ animation: { duration: 300 } })
+//     }, 200)
+//   })
+//   observer.observe(containerRef.current)
+//   return () => {
+//     clearTimeout(timer)
+//     observer.disconnect()
+//   }
+// }, [])
 
 function SidebarPanelIcon(props) {
   return (
