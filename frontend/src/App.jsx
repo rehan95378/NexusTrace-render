@@ -4,7 +4,7 @@ import { api } from './api'
 import Cases from './pages/Cases'
 import Ingestion from './pages/Ingestion'
 import Entities from './pages/Entities'
-import GraphView from './pages/GraphView'
+import GraphViewCytoscape from './pages/GraphView'
 import KeyPlayers from './pages/KeyPlayers'
 import Anomalies from './pages/Anomalies'
 import AuditTrail from './pages/AuditTrail'
@@ -225,7 +225,7 @@ export default function App() {
         <div
           className={
             tab === 'graph'
-              ? 'flex-1 min-h-0 flex flex-col p-3 md:p-4 bg-light-bg dark:bg-bg'
+              ? 'flex-1 min-h-0 flex flex-col bg-light-bg dark:bg-bg'
               : 'flex-1 min-h-0 overflow-y-auto bg-light-bg dark:bg-bg'
           }
         >
@@ -233,7 +233,7 @@ export default function App() {
           {tab === 'ingestion' && <Ingestion key={resetKey} onIngested={bumpRefresh} />}
           {tab === 'entities' && <Entities refreshKey={refreshKey} />}
           {tab === 'graph' && (
-            <GraphView
+            <GraphViewCytoscape
               refreshKey={refreshKey}
               onGraphChanged={bumpRefresh}
               sidebarToggle={

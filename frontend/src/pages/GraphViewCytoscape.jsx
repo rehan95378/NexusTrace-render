@@ -1,27 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { DataSet } from 'vis-data'
-import { Network } from 'vis-network'
+import CytoscapeComponent from 'cytoscape'
+import FCose from 'cytoscape-fcose'
 import NodeDetailsPanel from '../components/NodeDetailsPanel'
 import GraphEditPanel from '../components/GraphEditPanel'
 import { useListCases, useGraph, useAllGraph } from '../hooks/useQueries'
+import { graphToCytoscapeElements, createCytoscapeStylesheet } from '../hooks/useGraphAdapter'
+
+// Register fcose layout
+CytoscapeComponent.use(FCose)
 
 const LAST_CASE_KEY = 'sih_last_graph_case_id'
 
-// Single-case mode node ids come in two shapes from GET /cases/{case_id}/graph:
-//   "Type:id"              — a node that belongs to the case being viewed
-//   "case_id:Type:id"      — a cross-case neighbor node the endpoint pulls
-//                            in so its edge has somewhere to point
-// The previous version always split on the *first* colon, so a cross-case
-// id like "9a1c...:Person:Rohan Sharma" got parsed as
-// type = "9a1c..." and id = "Person:Rohan Sharma" — garbage — and always
-// assumed nodeCaseId === the currently selected case, which is wrong for
-// the foreign node. This mirrors the case-aware parsing GraphEditPanel.jsx
-// already uses for its edge options.
 function parseSingleCaseNodeId(nodeId, viewedCaseId) {
   const parts = nodeId.split(':')
   if (parts.length >= 3) {
-    // Cross-case node: case_id:Type:id (id itself may contain colons, so
-    // rejoin everything after the first two segments)
     const [nodeCaseId, type, ...rest] = parts
     return { type, id: rest.join(':'), nodeCaseId }
   }
@@ -33,21 +25,15 @@ function parseSingleCaseNodeId(nodeId, viewedCaseId) {
   }
 }
 
-// sidebarToggle: optional node (the app-level "show sidebar" icon button),
-// passed in from App.jsx and rendered as the first item in the controls
-// row below — this is deliberately NOT a separate header bar of its own,
-// so collapsing the sidebar never costs the graph canvas any vertical
-// space, whichever case is selected.
-export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle }) {
+export default function GraphViewCytoscape({ refreshKey, onGraphChanged, sidebarToggle }) {
   const containerRef = useRef(null)
-  const networkRef = useRef(null)
+  const cyRef = useRef(null)
   const [mode, setMode] = useState('this-case')
   const [selectedCaseId, setSelectedCaseId] = useState('')
   const [visibleCaseIds, setVisibleCaseIds] = useState(new Set())
   const [selected, setSelected] = useState(null)
   const [editOpen, setEditOpen] = useState(false)
 
-  // React Query hooks
   const { data: cases = [] } = useListCases()
   const { data: caseGraphData } = useGraph(selectedCaseId)
   const { data: allGraphData } = useAllGraph()
@@ -56,6 +42,7 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
   const graphData = isAllCases ? allGraphData : caseGraphData
   const empty = !graphData || !graphData.nodes || graphData.nodes.length === 0
 
+  // Initialize case selection
   useEffect(() => {
     if (cases.length > 0) {
       setVisibleCaseIds(new Set(cases.map(c => c.id)))
@@ -72,147 +59,100 @@ export default function GraphView({ refreshKey, onGraphChanged, sidebarToggle })
     }
   }, [selectedCaseId])
 
+  // Initialize and update Cytoscape graph
   useEffect(() => {
-    if (!graphData || !graphData.nodes || graphData.nodes.length === 0) {
+    if (!containerRef.current) return
+
+    // Clean up old instance
+    if (cyRef.current) {
+      cyRef.current.destroy()
+      cyRef.current = null
+    }
+
+    if (empty) {
       setSelected(null)
-      if (networkRef.current) {
-        networkRef.current.destroy()
-        networkRef.current = null
-      }
       return
     }
 
     let nodes = graphData.nodes
     let edges = graphData.edges || []
 
-    // In all-cases mode, filter nodes/edges by visible case checkboxes
+    // Filter by visible cases in all-cases mode
     if (isAllCases) {
       nodes = nodes.filter(n => visibleCaseIds.has(n.case_id))
       edges = edges.filter(e => {
-        // For cross-case edges, show if either endpoint's case is visible
         if (e.link_type === 'cross_case') {
           const srcCase = nodes.find(n => n.id === e.source)?.case_id
           const tgtCase = nodes.find(n => n.id === e.target)?.case_id
           return (srcCase && visibleCaseIds.has(srcCase)) || (tgtCase && visibleCaseIds.has(tgtCase))
         }
-        // For in-case edges, show if the case is visible
         return visibleCaseIds.has(e.case_id)
       })
     }
 
     if (nodes.length === 0) {
       setSelected(null)
-      if (networkRef.current) {
-        networkRef.current.destroy()
-        networkRef.current = null
-      }
       return
     }
 
-  const visNodes = new DataSet(
-  nodes.map((n) => ({
-    id: n.id,
-    label: n.label,
-    color: {
-      background: n.color,
-      border: '#0b0f10',
-      highlight: { background: n.color, border: '#e3a008' },
-      hover: { background: n.color, border: '#e7ece9' },
-    },
-    borderWidth: 2,
-    borderWidthSelected: 5,
-    font: {
-      color: '#e7ece9',
-      size: 18,
-      face: 'Inter, system-ui, sans-serif',
-      strokeWidth: 4,          // dark outline keeps labels readable over edges
-      strokeColor: '#0b0f10',
-    },
-    // If backend sends betweenness (0..1), scale by it. Otherwise fixed size.
-    size:
-      typeof n.betweenness === 'number'
-        ? 30 + Math.min(1, n.betweenness) * 30
-        : 30,
-  }))
-)
+    // Convert to Cytoscape format
+    const { nodes: cyNodes, edges: cyEdges } = graphToCytoscapeElements({
+      nodes,
+      edges
+    })
 
-const visEdges = new DataSet(
-  edges.map((e, i) => {
-    const isCrossCase = e.link_type === 'cross_case'
-    return {
-      id: i,
-      from: e.source,
-      to: e.target,
-      label: e.label,
-      arrows: { to: { enabled: true, scaleFactor: 1.2 } },
-      dashes: isCrossCase ? [8, 6] : false,
-      color: {
-        color: isCrossCase ? '#b076e0' : '#5a6a6e',
-        highlight: '#e3a008',
-        hover: '#c3cfd2',
+    // Initialize Cytoscape
+    const cy = CytoscapeComponent({
+      container: containerRef.current,
+      elements: [...cyNodes, ...cyEdges],
+      style: createCytoscapeStylesheet(),
+      layout: {
+        name: 'fcose',
+        animate: true,
+        animationDuration: 800,
+        animationEasing: 'ease-in-out',
+        fit: true,
+        padding: 80,
+        nodeSpacing: 120,
+        edgeSeparation: 40,
+        packMargin: 20,
+        sampleSize: 800,
+        randomize: true,
+        gravity: 0.5,
+        gravityRange: 2,
+        gravityCompound: 1,
+        gravityRangeCompound: 1.5,
+        friction: 0.1,
+        numIter: 20000,
+        tileToRectRatio: 0.8,
+        convergenceThreshold: 0.00001,
+        nestingFactor: 0.2,
+        quality: 'draft',
+        directed: true,
+        spacingFactor: 1.5,
+        step: 'all',
+        zoom: 1,
+        pan: { x: 0, y: 0 }
       },
-      font: {
-        color: '#c3cfd2',
-        size: 14,
-        strokeWidth: 5,         // was 0; this is what makes labels legible at crossings
-        strokeColor: '#0b0f10',
-        align: 'middle',
-      },
-      width: isCrossCase ? 3 : 2,
-      selectionWidth: 2,
-      smooth: { type: 'dynamic' },
-    }
-  })
-)
+      wheelSensitivity: 0.08,
+      boxSelectionEnabled: false,
+      selectionType: 'single',
+      minZoom: 0.1,
+      maxZoom: 4.0,
+      textureOnViewport: true,
+      motionBlur: false,
+      hideEdgesOnViewport: false
+    })
 
-const options = {
-  physics: {
-    enabled: true,
-    solver: 'forceAtlas2Based',
-    // forceAtlas2Based: {
-    //   gravitationalConstant: -250,   // stronger repulsion: bigger nodes need more room
-    //   centralGravity: 0.01,
-    //   springLength: 260,
-    //   springConstant: 0.05,
-    //   damping: 0.6,
-    //   avoidOverlap: 1,
-    // },
-    forceAtlas2Based: {
-  gravitationalConstant: -120,   // back down, repulsion was the main spreader
-  centralGravity: 0.01,          // 5x stronger pull toward center; keeps orphans close
-  springLength: 150,             // was 260
-  springConstant: 0.08,
-  damping: 0.6,
-  avoidOverlap: 1,
-},
-    minVelocity: 0.75,
-    stabilization: { iterations: 800, updateInterval: 50 },  // was 200: too few, froze the layout half-settled
-  },
-  nodes: { shape: 'dot', borderWidth: 2 },
-  interaction: { hover: true, tooltipDelay: 150 },
-}
+    cyRef.current = cy
 
-    if (networkRef.current) {
-      networkRef.current.destroy()
-    }
-    const network = new Network(containerRef.current, { nodes: visNodes, edges: visEdges }, options)
-    networkRef.current = network
-
-  network.once('stabilizationIterationsDone', () => {
-  network.setOptions({ physics: false })
-  network.fit({ animation: { duration: 400, easingFunction: 'easeInOutQuad' } })
-})
-    network.on('dragStart', () => network.setOptions({ physics: true }))
-    network.on('dragEnd', () => network.setOptions({ physics: false }))
-
-    network.on('click', (params) => {
-      if (params.nodes.length === 0) {
-        setSelected(null)
-        return
-      }
-      const nodeId = params.nodes[0]
+    // Handle node click
+    cy.on('tap', 'node', (evt) => {
+      const node = evt.target
+      const nodeId = node.id()
 
       let type, id, nodeCaseId
+
       if (isAllCases) {
         const parts = nodeId.split(':')
         nodeCaseId = parts[0]
@@ -222,17 +162,16 @@ const options = {
         ;({ type, id, nodeCaseId } = parseSingleCaseNodeId(nodeId, selectedCaseId))
       }
 
-      const canvasPos = network.getPositions([nodeId])[nodeId]
-      const domPos = network.canvasToDOM(canvasPos)
-
+      // Get node position for panel
+      const pos = node.renderedPosition()
       const PANEL_WIDTH = 280
       const PANEL_MAX_HEIGHT = 420
       const bounds = containerRef.current.getBoundingClientRect()
 
-      let x = domPos.x + 40
-      let y = domPos.y
+      let x = pos.x + 18
+      let y = pos.y
       if (x + PANEL_WIDTH > bounds.width) {
-        x = domPos.x - PANEL_WIDTH - 40
+        x = pos.x - PANEL_WIDTH - 18
       }
       y = Math.max(0, Math.min(y, bounds.height - PANEL_MAX_HEIGHT))
       x = Math.max(0, x)
@@ -240,10 +179,17 @@ const options = {
       setSelected({ type, id, caseId: nodeCaseId, position: { x, y } })
     })
 
+    // Clear selection on background click
+    cy.on('tap', (evt) => {
+      if (evt.target === cy) {
+        setSelected(null)
+      }
+    })
+
     return () => {
-      if (networkRef.current) {
-        networkRef.current.destroy()
-        networkRef.current = null
+      if (cyRef.current) {
+        cyRef.current.destroy()
+        cyRef.current = null
       }
     }
   }, [graphData, isAllCases, visibleCaseIds, selectedCaseId])
@@ -266,7 +212,7 @@ const options = {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex flex-wrap items-center gap-3 mb-3 flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-4 px-3 py-2.5 flex-shrink-0 bg-light-panel dark:bg-panel border-b border-light-border dark:border-border">
         {sidebarToggle}
 
         <select
@@ -298,8 +244,19 @@ const options = {
           Edit graph
         </button>
 
+        <button
+          className="px-4 py-2 bg-light-panel-raised dark:bg-panel-raised text-light-text dark:text-text font-semibold rounded-lg hover:bg-light-panel-raised/80 dark:hover:bg-panel-raised/80 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-light-border dark:focus:ring-border focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-bg text-sm"
+          onClick={() => {
+            if (cyRef.current) {
+              cyRef.current.fit(undefined, 50)
+            }
+          }}
+        >
+          Fit to screen
+        </button>
+
         {isAllCases && cases.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+          <div className="flex flex-wrap items-center gap-2 text-sm ml-auto">
             <span className="text-light-muted dark:text-muted">Show:</span>
             {cases.map((c) => (
               <label key={c.id} className="flex items-center gap-1.5 cursor-pointer">
@@ -309,20 +266,20 @@ const options = {
                   onChange={() => toggleCaseVisibility(c.id)}
                   className="h-4 w-4 text-accent bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded focus:ring-accent"
                 />
-                {c.name}
+                <span className="text-light-text dark:text-text">{c.name}</span>
               </label>
             ))}
           </div>
         )}
       </div>
 
-      <div className="relative flex-1 min-h-0 rounded-lg overflow-hidden bg-light-bg dark:bg-bg border border-light-border dark:border-border">
+      <div className="relative flex-1 min-h-0 bg-light-bg dark:bg-bg">
         {empty && (
-          <p className="absolute inset-0 flex items-center justify-center text-light-muted dark:text-muted font-mono text-sm px-4 text-center pointer-events-none">
+          <p className="absolute inset-0 flex items-center justify-center text-light-muted dark:text-muted font-mono text-sm px-4 text-center pointer-events-none z-50">
             Canvas empty. Run ingestion in the Ingestion tab first.
           </p>
         )}
-        <div id="graph-canvas" ref={containerRef} className="w-full h-full" />
+        <div ref={containerRef} className="absolute inset-0 w-full h-full" />
         {selected && (
           <NodeDetailsPanel
             caseId={selected.caseId}
