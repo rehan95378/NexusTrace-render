@@ -300,7 +300,7 @@ PORT=8000
 # Frontend (.env)
 VITE_API_URL=http://localhost:8000   # local dev
 # or
-VITE_API_URL=https://backend-url.onrender.com  # production
+VITE_API_URL=https://nexustrace-1.onrender.com/ # production
 ```
 
 ### Performance Tuning
@@ -419,7 +419,13 @@ Built for crime network analysis and law enforcement intelligence gathering.
 
 ## 🔗 Links
 
-- **Live Demo**: [Render.com deployment URL]
+- **Live Demo**:
+
+First Start Backend Using This Link
+https://nexustrace-65jm.onrender.com/
+Then See The Demo
+https://nexustrace-1.onrender.com/
+
 - **Neo4j**: https://neo4j.com/cloud/aura
 - **spaCy**: https://spacy.io
 - **FastAPI**: https://fastapi.tiangolo.com
