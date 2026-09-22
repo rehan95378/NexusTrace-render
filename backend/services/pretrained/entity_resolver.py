@@ -26,7 +26,16 @@ class EntityResolver:
                 best_score = score
                 best_match = known_name
 
-        return best_match if best_match else name
+        if best_match:
+            return best_match
+
+        # Fall back to structural matches the fuzzy blend misses,
+        # e.g. "R. Sharma" -> "Rohan Sharma", "Kumar" -> "Anil Kumar"
+        initials_match = self._match_initials(name, known_people)
+        if initials_match:
+            return initials_match
+
+        return self._match_surname(name, known_people) or name
 
     def compute_person_match_score(self, name1: str, name2: str) -> float:
         """Compute fuzzy match score between two person names (0-100)"""
@@ -54,3 +63,37 @@ class EntityResolver:
         final_score = (base_score * 0.4) + (token_score * 0.6)
 
         return final_score
+
+    def _match_initials(self, name: str, known_people: list[str]) -> str | None:
+        """Resolve 'R. Sharma' style mentions against a known full name.
+
+        Only resolves when exactly one known person shares the surname
+        and matching leading initials, to avoid merging distinct people.
+        """
+        tokens = [t for t in name.replace(".", " ").split() if t]
+        if len(tokens) < 2:
+            return None
+
+        *initial_tokens, surname = tokens
+        name_initials = [t[0].lower() for t in initial_tokens]
+
+        candidates = []
+        for known in known_people:
+            known_tokens = known.split()
+            if len(known_tokens) < 2 or known_tokens[-1].lower() != surname.lower():
+                continue
+            known_initials = [t[0].lower() for t in known_tokens[:-1]]
+            if name_initials == known_initials[: len(name_initials)]:
+                candidates.append(known)
+
+        return candidates[0] if len(candidates) == 1 else None
+
+    def _match_surname(self, name: str, known_people: list[str]) -> str | None:
+        """Resolve a bare surname ('Kumar') to a known full name, if unambiguous."""
+        tokens = name.split()
+        if len(tokens) != 1:
+            return None
+
+        surname = tokens[0].lower()
+        candidates = [k for k in known_people if k.split() and k.split()[-1].lower() == surname]
+        return candidates[0] if len(candidates) == 1 else None
