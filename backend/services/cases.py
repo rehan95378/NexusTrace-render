@@ -46,3 +46,19 @@ def rename_case(case_id, name):
 
 def delete_case(case_id):
     db.delete_case(case_id)
+
+
+def validate_case_name(name):
+    """Validate case name - return stripped name or raise ValueError"""
+    name = name.strip()
+    if not name:
+        raise ValueError("Case name is required.")
+    return name
+
+
+def require_case(case_id):
+    """Check if case exists, return it or raise ValueError"""
+    case = get_case(case_id)
+    if not case:
+        raise ValueError("Case not found.")
+    return case
