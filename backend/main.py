@@ -6,8 +6,8 @@ import os
 load_dotenv()
 
 from utils.neo4j_driver import verify_connectivity
-from routers import cases, ingest, entities, graph, analysis, audit
-from services.extraction import get_nlp
+from routers import cases, ingest, entities, graph, analysis, audit, graph_edit
+from services.pretrained.nlp_loader import get_nlp
 
 app = FastAPI(title="SIH26189 Backend")
 
@@ -26,6 +26,7 @@ app.include_router(entities.router)
 app.include_router(graph.router)
 app.include_router(analysis.router)
 app.include_router(audit.router)
+app.include_router(graph_edit.router)
 
 
 @app.on_event("startup")

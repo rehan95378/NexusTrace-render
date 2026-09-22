@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 
 const NODE_TYPES = [
   { key: 'people', type: 'Person', label: 'Person' },
@@ -26,6 +27,17 @@ function splitKey(key) {
   return [key.slice(0, sep), key.slice(sep + 1)]
 }
 
+// Refresh graph data from the API
+function refreshGraph(caseId, allCasesMode, setEntities, setEdges) {
+  if (allCasesMode) {
+    api.allEntities().then(setEntities).catch(() => {})
+    api.allGraph().then((g) => setEdges(g.edges)).catch(() => {})
+  } else {
+    api.entities(caseId).then(setEntities).catch(() => {})
+    api.graph(caseId).then((g) => setEdges(g.edges)).catch(() => {})
+  }
+}
+
 /**
  * The single entry point for every graph-editing action: create/rename/
  * delete/merge nodes, and create/rename/delete relationships (freely
@@ -34,6 +46,7 @@ function splitKey(key) {
  * cases (cross-case manual linking).
  */
 export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChanged }) {
+  const queryClient = useQueryClient()
   const [tab, setTab] = useState('create-node')
   const [entities, setEntities] = useState(null)
   const [edges, setEdges] = useState(null)
@@ -59,6 +72,12 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
   const nodeOptions = useMemo(() => {
     if (!entities) return []
 
+    // Handle both {entities: [...]} and [...] response formats
+    let entityList = entities
+    if (!Array.isArray(entities) && entities.entities) {
+      entityList = entities.entities
+    }
+
     if (allCasesMode) {
       // All-cases mode: entities array has { type, value, case_id, case_name }
       // type is lowercase (e.g., "person", "phone") so capitalize it
@@ -70,13 +89,13 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
         'organization': 'Organization'
       }
 
-      // Defensive: ensure entities is an array
-      if (!Array.isArray(entities)) {
-        console.error('Expected entities to be an array in all-cases mode, got:', entities)
+      // Defensive: ensure entityList is an array
+      if (!Array.isArray(entityList)) {
+        console.error('Expected entityList to be an array in all-cases mode, got:', entityList)
         return []
       }
 
-      return entities.map((e) => {
+      return entityList.map((e) => {
         // Defensive: ensure entity has required fields
         if (!e || !e.type || !e.value || !e.case_id) {
           console.warn('Skipping invalid entity:', e)
@@ -191,8 +210,22 @@ export default function GraphEditPanel({ caseId, allCasesMode, onClose, onChange
 
   function notifyChanged(message) {
     setStatus({ kind: 'success', message })
-    refreshLists()
-    onChanged?.()
+
+    // Invalidate React Query cache to force automatic refresh
+    if (allCasesMode) {
+      queryClient.invalidateQueries({ queryKey: ['graph', 'all'] })
+      queryClient.invalidateQueries({ queryKey: ['entities', 'all'] })
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['graph', caseId] })
+      queryClient.invalidateQueries({ queryKey: ['entities', caseId] })
+    }
+
+    // Refresh lists with a small delay to ensure state updates
+    setTimeout(() => {
+      refreshLists()
+      onChanged?.()
+    }, 100)
+
     // Brief pause so the confirmation is actually readable, then the panel
     // closes itself — no need to manually dismiss it after every edit.
     setTimeout(() => onClose?.(), 900)
@@ -378,7 +411,7 @@ function CreateRelForm({ caseId, allCasesMode, nodeOptions, suggestions, onDone,
           source_type: sType, source_id: sId,
           target_type: tType, target_id: tId,
           target_case_id: tCaseId, // For cross-case relationships
-          rel_type: relType,
+          relationship_type: relType,
         })
         const crossCaseNote = sCaseId !== tCaseId ? ' (cross-case)' : ''
         setRelType('')
@@ -404,7 +437,7 @@ function CreateRelForm({ caseId, allCasesMode, nodeOptions, suggestions, onDone,
           className="w-full px-3 py-2 bg-light-bg dark:bg-bg border border-light-border dark:border-border rounded-lg text-sm font-mono text-light-text dark:text-text placeholder:text-light-muted dark:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
         />
         <datalist id="rel-type-suggestions">
-          {suggestions.map((s) => <option key={s} value={s} />)}
+          {(suggestions || []).map((s, i) => <option key={i} value={s} />)}
         </datalist>
       </div>
       {allCasesMode && source && target && source.split('::')[0] !== target.split('::')[0] && (
@@ -491,7 +524,7 @@ function RenameRelForm({ caseId, edgeOptions, onDone, guard }) {
           source_type: edge.sType, source_id: edge.sId,
           target_type: edge.tType, target_id: edge.tId,
           target_case_id: edge.tCaseId,  // Support cross-case
-          old_rel_type: edge.relType, new_rel_type: newName,
+          old_relationship_type: edge.relType, new_relationship_type: newName,
         })
         const to = newName
         setNewName('')
@@ -647,7 +680,7 @@ function DeleteRelForm({ caseId, edgeOptions, onDone, guard }) {
           source_type: edge.sType, source_id: edge.sId,
           target_type: edge.tType, target_id: edge.tId,
           target_case_id: edge.tCaseId,  // Support cross-case
-          rel_type: edge.relType,
+          relationship_type: edge.relType,
         })
         setEdgeKey('')
         onDone('Relationship deleted.')

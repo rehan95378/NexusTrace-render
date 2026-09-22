@@ -13,7 +13,14 @@ for consumption by routers/graph.py's GET /graph/all endpoint.
 """
 
 from utils import neo4j_driver as db
-from services.resolution import compute_person_match_score
+from services.pretrained.entity_resolver import EntityResolver
+
+# Create resolver instance for cross-case matching
+_resolver = EntityResolver()
+
+def compute_person_match_score(name1, name2):
+    """Wrapper for backward compatibility"""
+    return _resolver.compute_person_match_score(name1, name2)
 
 
 def find_cross_case_links(case_ids=None):
