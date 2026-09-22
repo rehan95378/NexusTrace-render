@@ -52,9 +52,10 @@ class EntityExtractor:
         """Extract organizations from known watchlist"""
         return list({org for org in KNOWN_ORGS if org in text})
 
-    def extract_all(self, text: str) -> dict:
+    def extract_all(self, text: str, doc=None) -> dict:
         """Extract all entity types from text"""
-        doc = process_text(text)
+        if doc is None:
+            doc = process_text(text)
         return {
             "people": self.extract_people(doc),
             "locations": self.extract_locations(doc),
@@ -66,7 +67,7 @@ class EntityExtractor:
     def _clean_person_name(self, text: str) -> str:
         """Remove honorifics and possessives"""
         name = re.sub(r'^(Smt\.|Shri\.|Mr\.|Mrs\.)\s*', '', text).strip()
-        name = re.sub(r"['\']s$", '', name).strip()
+        name = re.sub(r"['\u2019]s$", '', name).strip()
         return name
 
     def _is_valid_person(self, name: str) -> bool:

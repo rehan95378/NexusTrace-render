@@ -2,11 +2,15 @@
 Relationship extractor - Extract relationships between entities using keyword triggers.
 """
 from .config import TRIGGERS
+from .entity_resolver import EntityResolver
 from itertools import combinations
 
 
 class RelationshipExtractor:
     """Extract relationships using keyword triggers"""
+
+    def __init__(self, resolver: EntityResolver | None = None):
+        self.resolver = resolver or EntityResolver()
 
     def extract_person_relationships(self, sent, people: list) -> list[dict]:
         """Extract Person-Person relationships from sentence"""
@@ -169,11 +173,17 @@ class RelationshipExtractor:
         if isinstance(labels, str):
             labels = [labels]
 
-        entities_in_sent = {
+        raw_mentions = {
             e.text.strip() for e in sent.ents if e.label_ in labels
         }
 
-        return [e for e in entity_list if e in entities_in_sent]
+        if "PERSON" in labels:
+            # Sentence mentions are often aliases ("R. Sharma"); resolve each
+            # to its canonical form before checking membership.
+            resolved = {self.resolver.resolve_person(raw, entity_list) for raw in raw_mentions}
+            return [e for e in entity_list if e in resolved]
+
+        return [e for e in entity_list if e in raw_mentions]
 
     def _has_trigger(self, sent_lower: str, rel_type: str) -> bool:
         """Check if sentence contains trigger keywords for relationship type"""

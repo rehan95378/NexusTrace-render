@@ -38,7 +38,7 @@ class PretrainedPipeline:
         doc = process_text(combined_text)
 
         # Extract all entity types
-        raw_entities = self.entity_extractor.extract_all(combined_text)
+        raw_entities = self.entity_extractor.extract_all(combined_text, doc=doc)
 
         # Resolve and merge entities
         entities = self._resolve_and_merge_entities(raw_entities, case_id)
